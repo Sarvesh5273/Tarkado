@@ -1,0 +1,31 @@
+# Python environment and generated Python files
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Sensitive/local data and generated artifacts
+data/
+traces/
+artifacts/
+outputs/
+logs/
+*.sqlite
+*.db
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/
