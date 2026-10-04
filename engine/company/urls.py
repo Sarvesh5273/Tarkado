@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import connector_views, control_views, learning_views, mfa_views, selection_views, task_views, views
+from . import connector_views, control_views, delivery_views, learning_views, mfa_views, operations_views, selection_views, task_views, views
 
 handler403 = views.forbidden
 handler404 = views.not_found
@@ -17,11 +17,16 @@ urlpatterns = [
     path("pilots/", control_views.pilots, name="company-pilots"),
     path("pilots/reviews/new/", control_views.new_review, name="company-review-new"),
     path("learning/", learning_views.index, name="company-learning"),
+    path("monitoring/", operations_views.monitoring, name="company-monitoring"),
+    path("privacy/", operations_views.privacy, name="company-privacy-controls"),
+    path("gateways/", operations_views.gateways, name="company-gateways"),
+    path("gateways/<uuid:reference>/revoke/", operations_views.revoke_gateway, name="company-gateway-revoke"),
     path("learning/reviews/<uuid:reference>/publish/", learning_views.publish, name="company-learning-publish"),
     path("pilots/reviews/<uuid:reference>/", control_views.review_detail, name="company-review-detail"),
     path("pilots/reviews/<uuid:reference>/authorize/", control_views.approve, name="company-pilot-authorize"),
     path("pilots/<uuid:reference>/", control_views.pilot_control, name="company-pilot-control"),
     path("pilots/<uuid:reference>/selection/", selection_views.controls, name="company-selection-control"),
+    path("pilots/<uuid:reference>/handoff/", operations_views.handoff, name="company-policy-handoff"),
     path("pilots/<uuid:reference>/decide/", control_views.pilot_decision, name="company-pilot-decide"),
     path("pilots/<uuid:reference>/settle/", control_views.pilot_settlement, name="company-pilot-settle"),
     path("security/mfa/setup/", mfa_views.setup, name="company-mfa-setup"),
@@ -47,6 +52,13 @@ urlpatterns = [
     path("api/connectors/v1/conditional-select/", connector_views.conditional_select),
     path("api/connectors/v1/conditional-claim/", connector_views.conditional_claim),
     path("api/connectors/v1/conditional-settle/", connector_views.conditional_settle),
+    path("api/connectors/v1/delivery-bind/", delivery_views.bind),
+    path("api/connectors/v1/delivery-preflight/", delivery_views.preflight),
+    path("api/delivery/v1/describe/", delivery_views.describe_view),
+    path("api/delivery/v1/begin/", delivery_views.begin_view),
+    path("api/delivery/v1/attempt/", delivery_views.attempt_view),
+    path("api/delivery/v1/settle/", delivery_views.settle_view),
+    path("api/delivery/v1/close/", delivery_views.close_view),
     path("tasks/new/", task_views.new_task, name="company-task-new"),
     path("tasks/<uuid:reference>/", task_views.detail, name="company-task-detail"),
     path("tasks/<uuid:reference>/response/", task_views.action, {"kind": "response"}, name="company-task-response"),
