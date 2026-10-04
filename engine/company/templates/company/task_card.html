@@ -1,0 +1,7 @@
+{% load company_ui %}
+<article class="card"><h3><a href="{% url 'company-task-detail' card.task.reference %}">{{ card.task.task_id }}</a></h3>
+<p>{{ card.task.owner.username }} · {{ card.task.repository_ref }} · {{ card.task.source_kind|words }}</p><p class="badge">{{ card.state }}</p>
+<dl class="metadata"><dt>Originally selected</dt><dd>{{ card.recommendation.task.selected_model }}</dd><dt>Saved suggestion</dt><dd>{{ card.row.suggested_model|default_if_none:'Blocked — no compatible suggestion' }}</dd><dt>Reported actual model</dt><dd>{{ card.row.actual_model|known }}</dd><dt>One-task response</dt><dd>{{ card.row.response|known }}</dd><dt>Policy version</dt><dd>{{ card.recommendation.decision.policy_version }}</dd></dl>
+{% if card.row.model_override %}<p class="warning">Model mismatch / override retained. The suggestion does not receive the other model's result.</p>{% endif %}
+{% if card.policy_changed %}<p>Historical suggestion: company policy has changed.</p>{% endif %}
+</article>

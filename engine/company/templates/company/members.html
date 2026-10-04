@@ -1,0 +1,6 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h2>Individual company accounts</h2><table><tr><th>Account</th><th>Role</th><th>Active</th><th>Participating</th><th>Admin</th><th>Pilot approver</th><th>Control</th></tr>
+{% for member in members %}<tr><td>{{ member.developer_id }}</td><td>{{ member.role }}</td><td>{{ member.active }}</td><td>{{ member.participating }}</td><td>{{ member.can_manage_company }}</td><td>{{ member.can_approve_pilots }}</td><td><a href="{% url 'company-member-edit' member.user_id %}">Change permissions</a></td></tr>{% endfor %}</table>
+<p>Disabling access preserves this account and change history. It does not rewrite past feedback roles.</p>
+{% endblock %}

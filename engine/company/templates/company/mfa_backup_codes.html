@@ -1,0 +1,8 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h2>Authenticator confirmed — save your backup codes privately</h2>
+<p>These codes are shown once. Keep them outside your laptop/company database backup, in a private recovery location. Each can be used only once, together with your password, to replace a lost factor.</p>
+{% for code in codes %}<pre class="backup-code">{{ code }}</pre>{% endfor %}
+<p>Backup recovery grants a short-lived factor-replacement ticket, not administrator access or pilot approval. A new authenticator must be confirmed before protected access resumes.</p>
+<a href="{% url 'company-home' %}">Continue to company workflow</a>
+{% endblock %}

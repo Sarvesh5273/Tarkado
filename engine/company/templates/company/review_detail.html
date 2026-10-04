@@ -1,0 +1,6 @@
+{% extends 'company/base.html' %}
+{% block content %}<h1>Category evidence review</h1>
+{% include 'company/review_evidence.html' %}
+<p><a href="{% url 'company-learning-publish' review.reference %}">Review learner publication for future manual suggestions</a> (not pilot approval).</p>
+{% if request.company_member.can_approve_pilots and review_guard.status == 'current' %}<p><a class="button" href="{% url 'company-pilot-authorize' review.reference %}">Select a separate pilot scope</a></p>{% elif not request.company_member.can_approve_pilots %}<p>You may review evidence but are not a designated pilot approver. Share this review within the company with a separately designated senior/admin; reviewing or accepting a task grants no approval authority.</p>{% endif %}
+<p><a href="{% url 'company-review-new' %}">Prepare another validation review</a> · <a href="{% url 'company-pilots' %}">Back to evidence &amp; pilots</a></p>{% endblock %}

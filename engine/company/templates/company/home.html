@@ -1,0 +1,21 @@
+{% extends 'company/base.html' %}
+{% load company_ui %}
+{% block content %}
+<h1>{{ company.name }}</h1>
+<p>Company revision: {{ company.revision }}. Your role: {{ member.role }}.</p>
+<p>Participating developer: {{ member.participating|known }}. Company administrator permission: {{ member.can_manage_company|known }}. Designated pilot approver: {{ member.can_approve_pilots|known }}.</p>
+<p>Approver designation alone does not approve a pilot. Senior feedback alone does not grant designation.</p>
+{% if member.participating or member.can_manage_company %}<p><a href="{% url 'company-tasks' %}">Linked manual task workflow</a>{% if member.participating %} · <a class="button" href="{% url 'company-task-new' %}">Start a manual task</a>{% endif %}</p>{% endif %}
+{% if summary %}<p>Pending model-use reports {{ summary.pending_executions }} · pending results {{ summary.pending_results }} · model mismatches / overrides {{ summary.model_overrides }}. Unknowns remain unknown.</p><div class="cards">{% for card in cards %}{% include 'company/task_card.html' %}{% empty %}<section class="empty"><h3>No tasks yet</h3><p>Record permitted metadata to start the manual workflow. This build does not automatically observe a coding tool.</p></section>{% endfor %}</div>{% endif %}
+{% if member.participating %}<section class="card"><h3>Your scoped simulations</h3>{% for approval in developer_pilots %}<p>{{ approval.pilot_id }} — <a href="{% url 'company-pilot-decide' approval.reference %}">Scoped simulated new-task admission</a> · <a href="{% url 'company-pilot-settle' approval.reference %}">Settle your simulated task</a>. Approval is rechecked on each action; old records are not fresh permission.</p>{% empty %}<p>No simulation scope includes you. Continue manual suggestions; per-task acceptance cannot authorize a pilot.</p>{% endfor %}</section>{% endif %}
+{% if member.can_approve_pilots or member.can_manage_company %}<p><a href="{% url 'company-pilots' %}">Category review and separate pilot controls</a></p>{% endif %}
+{% if member.can_manage_company %}<p><a href="{% url 'company-recovery-assisted' %}">Audited administrator-assisted password recovery</a></p>{% endif %}
+{% if member.can_manage_company %}<nav><a href="{% url 'company-invitations' %}">Invitations</a><a href="{% url 'company-members' %}">Accounts</a><a href="{% url 'company-configuration' %}">Policy and collection</a><a href="{% url 'company-history' %}">Change history</a></nav>{% endif %}
+<h3>Existing engine policy: {{ policy.policy_version }}</h3>
+<p>Approved default: {{ policy.default_model }}. Content fingerprint: <code>{{ fingerprint }}</code></p>
+{% include 'company/policy_summary.html' with displayed_policy=policy %}
+<h3>Approved collection repositories</h3><ul>{% for ref in company.repository_refs %}<li>{{ ref }}</li>{% endfor %}</ul>
+<p>Only active participating accounts are eligible for manual collection. No automatic or live collection has started.</p>
+<h3>Approved metadata fields</h3><ul>{% for field in company.collection_fields %}<li>{{ field }}</li>{% endfor %}</ul>
+<p>Retention: {{ company.retention_policy }}. There is no automatic deletion or encryption-at-rest guarantee.</p>
+{% endblock %}

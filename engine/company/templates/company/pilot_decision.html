@@ -1,0 +1,12 @@
+{% extends 'company/base.html' %}{% block content %}
+{% load company_ui %}
+<h1>{% if settlement %}Settle your simulated task{% else %}Scoped simulated new-task admission{% endif %}</h1>
+<p>No provider request, actual-model execution, or live permission is generated. Simulated settlements are not training quality labels.</p>
+<p>Pilot {{ authorization.pilot_id }} · state {{ status|words }} · guard {{ guard.status }}. {{ guard.reason }}</p>
+{% if settlement or can_admit or form.errors %}<form method="post">{% csrf_token %}{% include 'company/fields.html' %}<button type="submit">{% if settlement %}Save complete simulated settlement{% else %}Submit simulated new-task reservation{% endif %}</button></form>{% else %}<p>No new simulation admission is currently available. Scope/authority/state must be current; historical records and pending settlements remain intact.</p>{% endif %}
+<datalist id="task-categories">{% for category in form.categories %}<option value="{{ category }}"></option>{% endfor %}</datalist>
+{% if result %}<section class="card" role="status"><h3>{% if settlement %}Settlement recorded / exact retry retained{% else %}Simulated decision (no model executed){% endif %}</h3>{% metadata result %}</section>{% endif %}
+{% include 'company/accounting.html' %}
+<h3>Your simulated task records</h3>{% for row in decisions %}<article class="card"><h4>{{ row.task.task_id }} — {{ row.result.status }}</h4><p>{{ row.result.simulated_model|known }} · reservation USD {{ row.request.reserve_usd }} · {% if row.settlement %}{{ row.settlement.outcome }}, cost USD {{ row.settlement.actual_cost_usd }}{% else %}Awaiting settlement if reserved{% endif %}</p>{% if row.result.status == 'reserved' and not row.settlement %}<a href="{% url 'company-pilot-settle' reference %}">Settle this task using the selector</a>{% endif %}</article>{% empty %}<p>No task records owned by you. You cannot settle another developer's task.</p>{% endfor %}
+<p><a href="{% url 'company-home' %}">Back to home</a></p>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends 'company/base.html' %}{% block content %}
+<h2>Private one-use password-recovery credential</h2>
+<p>Shown once. Save offline in a private password manager/recovery location; never in Git, chat, URLs, or screenshots. A newly issued credential invalidates older grants of this kind.</p>
+<pre id="recovery-value">{{ value }}</pre>
+{% if assisted %}<p>Deliver privately only to the person whose identity you separately confirmed. This grant expires; it does not disable their existing MFA or restore revoked access.</p>{% endif %}
+<p>Use the password-recovery page plus your enrolled authenticator or a backup code. Recovery invalidates old sessions but never grants senior/admin/pilot permission.</p>
+{% endblock %}

@@ -1,0 +1,5 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form method="post">{% csrf_token %}{% include 'company/fields.html' %}<button type="submit">{{ submit_label|default:'Submit' }}</button></form>
+{% endblock %}

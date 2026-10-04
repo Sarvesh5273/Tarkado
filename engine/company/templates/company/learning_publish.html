@@ -1,0 +1,4 @@
+{% extends 'company/base.html' %}{% block content %}<h1>Publish reviewed manual suggestions</h1>
+<p>This exact learner, policy, evidence, source label, and repository scope affect future task suggestions only. Existing task records remain immutable. Publication never approves models, activates a pilot, or switches a live session. Review all inputs before confirming.</p>
+{% include 'company/review_evidence.html' %}
+<form method="post">{% csrf_token %}{% include 'company/fields.html' %}<button type="submit">Confirm explicit learner publication / default-only reversal</button></form>{% endblock %}

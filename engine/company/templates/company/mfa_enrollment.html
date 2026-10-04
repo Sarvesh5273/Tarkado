@@ -1,0 +1,9 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h2>Pair your authenticator privately</h2>
+<p>Use your authenticator application's manual setup: account {{ request.user.username }}, issuer Tarkado, time-based code, 6 digits, 30-second period. This is not a company SSO requirement.</p>
+<p>Private setup key (shown once). Never put it in Git, logs, chat, URLs, or public screenshots:</p>
+<pre id="setup-secret">{{ setup_secret }}</pre>
+<p><a href="{% url 'company-mfa-confirm' %}">Enter the current code to confirm enrollment</a></p>
+<p>Enrollment is incomplete until a valid code is confirmed. The setup key is not an API/provider credential.</p>
+{% endblock %}

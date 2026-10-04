@@ -1,0 +1,32 @@
+{% extends 'company/base.html' %}
+{% load company_ui %}
+{% block content %}
+<h1>Task {{ task.task_id }}</h1>
+<p>Owner: {{ task.owner.username }}. Repository: {{ task.repository_ref }}. Declared source: {{ task.source_kind }}. Task revision: {{ task.revision }}.</p>
+<p>Boundary {{ task.request.boundary }} and session reference are manually declared, not detected from OpenCode. No session access or model request occurs.</p>
+<dl class="metadata"><dt>Manual work session</dt><dd>{{ task.session_id }}</dd><dt>Saved task category</dt><dd>{{ task.request.task_type|known }}</dd><dt>Risk tags</dt><dd>{{ task.request.risk_tags|join:', '|default:'Unknown' }}</dd><dt>Required tools</dt><dd>{{ task.request.required_tools|join:', '|default:'None declared' }}</dd><dt>Required context tokens</dt><dd>{{ task.request.context_tokens|known }}</dd></dl>
+<h3>Manual shadow suggestion</h3>
+<p>Originally selected: {{ recommendation.task.selected_model }}. Suggested: {{ recommendation.decision.recommended_model|default_if_none:'Blocked' }}.</p>
+<p>Confidence: {{ recommendation.decision.confidence }}. Fallback: {{ recommendation.decision.fallback_model }}. Policy version: {{ recommendation.decision.policy_version }}.</p>
+<p>{{ recommendation.decision.reason }}</p>
+<p>Confidence is a rule explanation, not a measured probability of success. This is the saved historical suggestion, not permission to use a model that has since been disabled.</p>
+<p>Current company policy: {{ summary.policy_version }}. Saved policy changed: {{ policy_changed|known }}. Suggested model currently approved: {{ suggestion_currently_approved|known }}.</p>
+{% if task.suggestion_context %}<section class="card"><h3>Historical learned-suggestion publication</h3><p>Publication check at task creation: {{ task.suggestion_context.status }}. {{ task.suggestion_context.reason }}</p>{% if task.learning_snapshot %}<p>Exact learner version {{ task.learning_snapshot.plan.learner_version }} · fingerprint {{ task.learning_snapshot.learner_sha256 }}. This is experimental manual guidance, not production confidence or approval.</p>{% else %}<p>Published learner was unavailable; approved fallback was saved without inventing learning evidence.</p>{% endif %}</section>{% endif %}
+<section class="card"><h3>{{ state }}</h3><ol class="steps">
+<li>Respond to this task only: {{ row.response|known }}.{% if can_respond %} <a href="{% url 'company-task-response' task.reference %}">Accept/reject this suggestion</a>{% elif row.actual_model and not row.response %} No response was recorded before model use; it stays unknown.{% endif %}</li>
+<li>Report actual model: {{ row.actual_model|known }}.{% if can_execute %} <a href="{% url 'company-task-execution' task.reference %}">Report model actually used</a>{% endif %}</li>
+<li>Eventual result: {{ row.result_status|words }}.{% if can_result %} <a href="{% url 'company-task-result' task.reference %}">{% if current_result %}Append your result correction{% else %}Record a result{% endif %}</a>{% endif %}</li></ol>
+{% if row.compatibility_issue %}<p class="warning">Reported model is not currently compatible/approved: {{ row.compatibility_issue }}. Observation retained; no authorization granted.</p>{% endif %}
+{% if row.model_override %}<p class="warning">Different model used / override. This result belongs to {{ row.actual_model }}, not the suggested model.</p>{% endif %}</section>
+<h3>Current linkage and evidence</h3>
+{% if connector_state %}<section class="card"><h3>Linked OpenCode observations</h3><p>Explicit task boundary; no automatic prompt classification. Coverage {{ connector_state.coverage_status }} · gaps {{ connector_state.gap_count }} · observed attempt models {{ connector_state.observed_attempt_models|join:', '|default:'Unknown' }} · multiple models {{ connector_state.multiple_models|known }}.</p><p>{{ connector_state.note }}</p><p>No observation proves actual engineering success; reported actual-model use and results remain separate.</p>{% for observation in connector_observations %}<details><summary>{{ observation.sequence }} — {{ observation.payload.observation_kind|words }} at {{ observation.received_at|date:'c' }}; missing before {{ observation.missing_before }}</summary>{% metadata observation.payload %}<p>Historical actor {{ observation.actor_snapshot.developer_id }} / {{ observation.actor_snapshot.role }}.</p></details>{% endfor %}</section>{% endif %}
+{% if connector_state and not connector_state.closed and request.user.id == task.owner_id %}<p>Expired/unreachable pairing? <a href="{% url 'company-connector-end' task.reference %}">End interrupted observation with a permanent gap</a>. This preserves missing/negative records and permits a later new task; it cannot certify this task's success.</p>{% endif %}
+<dl class="metadata"><dt>Desired result reported</dt><dd>{{ row.desired_result|known }}</dd><dt>Tests passed</dt><dd>{{ row.tests_passed|known }}</dd><dt>Score</dt><dd>{{ row.score|known }}</dd><dt>Reported cost USD</dt><dd>{{ row.cost_usd|known }}</dd><dt>Reported latency ms</dt><dd>{{ row.latency_ms|known }}</dd><dt>Evidence reference</dt><dd>{{ current_result.evidence_ref|known }}</dd><dt>Historical task role</dt><dd>{{ row.developer_role }}</dd><dt>Result reviewer</dt><dd>{{ current_result.reviewer_id|known }}</dd></dl>
+<p>Acceptance is preference, not success or pilot approval. Only the model reported as actually used receives its reported outcome; unknown values remain unknown.</p>
+<h3>Authenticated action history</h3>
+{% for item in history %}<section class="card"><h4>{{ item.event.sequence }} — {{ item.event.kind|words }} at {{ item.event.timestamp|date:'c' }}</h4>
+<p>Account {{ item.event.actor_snapshot.developer_id }}, role at submission {{ item.event.actor_snapshot.role }}, company revision {{ item.event.company_revision }}.</p>
+<dl class="metadata">{% for label,value in item.values %}<dt>{{ label }}</dt><dd>{{ value|known }}</dd>{% endfor %}</dl></section>{% endfor %}
+<p>Roles are historical snapshots, not retroactive seniority. Actual-model use, tests, costs, and desired-result confirmations are human reports, not verified by login. Outcome corrections from another reviewer are blocked until disagreement handling is defined.</p>
+<a href="{% url 'company-tasks' %}">Back to tasks</a>
+{% endblock %}

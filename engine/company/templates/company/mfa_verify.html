@@ -1,0 +1,6 @@
+{% extends 'company/form.html' %}
+{% block content %}
+{{ block.super }}
+<p>Use a current, unused authenticator code. A password-only session cannot enter protected administrator/approver operations.</p>
+<p><a href="{% url 'company-mfa-recover' %}">Lost your authenticator? Use a private backup code</a></p>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends 'company/form.html' %}
+{% block content %}
+{{ block.super }}
+<p>Invitations are bound to a named account and administrator-assigned permissions. Deliver the one-time value privately; it is not emailed automatically.</p>
+<h3>Invitation history</h3><table><tr><th>Account</th><th>Role</th><th>Expiry (UTC)</th><th>State/control</th></tr>
+{% for item in invitations %}<tr><td>{{ item.username }}</td><td>{{ item.role }}</td><td>{{ item.expires_at|date:'c' }}</td><td>{% if item.consumed_at %}Used{% elif item.revoked_at %}Revoked{% else %}<a href="{% url 'company-invitation-revoke' item.invitation_id %}">Revoke</a>{% endif %}</td></tr>{% endfor %}</table>
+{% endblock %}

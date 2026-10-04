@@ -1,0 +1,6 @@
+{% extends 'company/form.html' %}
+{% block content %}
+{{ block.super }}
+<p>This recovers a lost authenticator only. You must still know your account password. For a forgotten password, use the separate private password-recovery credential/grant plus enrolled MFA. Never reset/delete company state to bypass it.</p>
+<p>A successful backup code gives five minutes to begin/confirm replacement. It does not directly grant privileged company access. The new factor revokes prior MFA sessions and old backup codes.</p>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends 'company/base.html' %}
+{% load company_ui %}
+{% block content %}
+<h1>Linked manual task workflow</h1>
+{% if request.company_member.participating %}<p><a class="button" href="{% url 'company-task-new' %}">Request a manual shadow suggestion</a></p>{% endif %}
+<p>Only the developer's chosen model runs elsewhere. Nothing here calls a model, reads a coding session, or approves a pilot. Team labels and human outcomes are not independently verified.</p>
+<div class="cards">{% for card in cards %}{% include 'company/task_card.html' %}{% empty %}<section class="empty"><h3>No tasks in your permitted view</h3><p>Participating developers can start a metadata-only task above. Seniors see approved-repository tasks; administrators can inspect retained history. Missing records are not successful outcomes.</p></section>{% endfor %}</div>
+<h3>Evidence in this permitted view</h3>
+<p>Suggestions {{ summary.recommendations }}; responses {{ summary.responses }}; actual-model records {{ summary.executions }}; current results {{ summary.current_results }}; result revisions {{ summary.result_revisions }}.</p>
+<p>Pending actual-model records {{ summary.pending_executions }}; pending results {{ summary.pending_results }}; model overrides {{ summary.model_overrides }}.</p>
+<p>Declared sources: synthetic {{ summary.source_counts.synthetic }}; manually labeled team {{ summary.source_counts.team }}. A filtered personal view is not company-wide readiness.</p>
+{% for group in summary.groups %}{% include 'company/evidence_group.html' %}{% endfor %}
+{% for note in summary.notes %}<p>{{ note }}</p>{% endfor %}
+{% endblock %}

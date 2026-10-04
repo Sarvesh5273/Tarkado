@@ -1,0 +1,11 @@
+{% extends 'company/base.html' %}{% block content %}<h1>Company policy and collection scope</h1>
+<p>Guided editing of the existing engine policy; no JSON copying. Approval states, model capabilities, and collection scope are explicit company declarations, not automatic verification. Changes never switch an active task or approve a pilot.</p>
+<p>Disabling models or changing company scope invalidates earlier pilot guards. Historical tasks, roles, costs, and failures are preserved. Use a new policy version for changed policy content.</p>
+<form method="post">{% csrf_token %}{{ form.expected_revision }}
+{% if form.errors %}<section class="error-summary" role="alert"><h3>Configuration was not changed</h3>{{ form.non_field_errors }}<ul>{% for field in form %}{% for error in field.errors %}<li>{{ field.label }}: {{ error }}</li>{% endfor %}{% endfor %}</ul></section>{% endif %}
+{% include 'company/field_group.html' with fields=configuration_fields %}
+<h3>Existing registered models</h3>{% for label,fields in model_sections %}<fieldset><legend>{{ label }}</legend>{% include 'company/field_group.html' %}</fieldset>{% endfor %}
+<details><summary>Register one additional model (optional)</summary>{% include 'company/field_group.html' with fields=new_model_fields %}<p>Registration is not model approval. Start with a declared candidate/shadow state unless company approval already exists.</p></details>
+<h3>Existing category rules</h3>{% for label,fields in rule_sections %}<fieldset><legend>{{ label }}</legend>{% include 'company/field_group.html' %}</fieldset>{% endfor %}
+<details><summary>Add one category rule (optional)</summary>{% include 'company/field_group.html' with fields=new_rule_fields %}</details>
+<fieldset><legend>Confirm consequential configuration change</legend><p>Review every value above. Scope/model changes can block new task collection and invalidate old pilot authority; they do not delete records or restart budgets.</p>{% include 'company/field_group.html' with fields=confirmation_fields %}<button type="submit">Confirm and save exact configuration</button></fieldset></form>{% endblock %}

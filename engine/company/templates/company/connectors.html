@@ -1,0 +1,7 @@
+{% extends 'company/base.html' %}{% block content %}
+<h1>OpenCode connector access</h1>
+<p>Pair your own developer account to one approved repository and exact working directory. Current permissions/MFA/recovery, collection fields, expiry, and revocation are checked on every API call. This is delegated observation only—not pilot authority, provider credentials, or execution permission.</p>
+<p>An administrator must first explicitly select connector observation fields in <strong>Policy &amp; collection</strong>. Existing installation scopes are not expanded automatically.</p>
+{% if form %}<form method="post">{% csrf_token %}{% include 'company/fields.html' %}<button type="submit">Confirm exact scope and issue private pairing credential</button></form>{% endif %}
+<h2>Retained pairings</h2>{% for credential in credentials %}<article class="card"><h3>{{ credential.name }} / {{ credential.user.username }}</h3><p>Repository {{ credential.scope.repository_ref }} · source {{ credential.scope.source_kind }} · expiry {{ credential.expires_at|date:'c' }}</p><p>{% if credential.revoked_at %}Revoked at {{ credential.revoked_at|date:'c' }}{% else %}<a href="{% url 'company-connector-revoke' credential.reference %}">Revoke connector access</a>{% endif %}</p><p>Directory hash {{ credential.scope.location_sha256 }}. Pairing proves account delegation, not independent machine integrity.</p></article>{% empty %}<p>No pairings. Plugin installation/loading is a separate operator action; this page does not install anything.</p>{% endfor %}
+{% endblock %}

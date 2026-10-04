@@ -1,0 +1,9 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h2>Company change history</h2>
+<p>Actor and time are recorded by the application. This is a private application history, not a tamper-proof or independently signed audit.</p>
+{% for event in events %}<section><h3>Revision {{ event.revision }}: {{ event.action }}</h3><p>{{ event.actor_username }} at {{ event.timestamp|date:'c' }}</p><pre>{{ event.details }}</pre></section>{% endfor %}
+<h2>Authentication security history</h2>
+<p>Enrollment, verification, and recovery events exclude passwords, setup seeds, and codes.</p>
+{% for event in security_events %}<section><h3>{{ event.action }}</h3><p>{{ event.user.username }} at {{ event.timestamp|date:'c' }}</p><pre>{{ event.details }}</pre></section>{% endfor %}
+{% endblock %}

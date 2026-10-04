@@ -1,0 +1,56 @@
+from django.urls import path
+
+from . import connector_views, control_views, learning_views, mfa_views, selection_views, task_views, views
+
+handler403 = views.forbidden
+handler404 = views.not_found
+
+
+urlpatterns = [
+    path("", views.home, name="company-home"),
+    path("login/", views.sign_in, name="company-login"),
+    path("join/", views.join, name="company-join"),
+    path("logout/", views.sign_out, name="company-logout"),
+    path("security/password/recovery/", control_views.personal_recovery, name="company-recovery-personal"),
+    path("security/password/assisted/", control_views.assisted_recovery, name="company-recovery-assisted"),
+    path("security/password/reset/", control_views.password_reset, name="company-password-reset"),
+    path("pilots/", control_views.pilots, name="company-pilots"),
+    path("pilots/reviews/new/", control_views.new_review, name="company-review-new"),
+    path("learning/", learning_views.index, name="company-learning"),
+    path("learning/reviews/<uuid:reference>/publish/", learning_views.publish, name="company-learning-publish"),
+    path("pilots/reviews/<uuid:reference>/", control_views.review_detail, name="company-review-detail"),
+    path("pilots/reviews/<uuid:reference>/authorize/", control_views.approve, name="company-pilot-authorize"),
+    path("pilots/<uuid:reference>/", control_views.pilot_control, name="company-pilot-control"),
+    path("pilots/<uuid:reference>/selection/", selection_views.controls, name="company-selection-control"),
+    path("pilots/<uuid:reference>/decide/", control_views.pilot_decision, name="company-pilot-decide"),
+    path("pilots/<uuid:reference>/settle/", control_views.pilot_settlement, name="company-pilot-settle"),
+    path("security/mfa/setup/", mfa_views.setup, name="company-mfa-setup"),
+    path("security/mfa/confirm/", mfa_views.confirm, name="company-mfa-confirm"),
+    path("security/mfa/verify/", mfa_views.verify, name="company-mfa-verify"),
+    path("security/mfa/recover/", mfa_views.recover, name="company-mfa-recover"),
+    path("security/mfa/cancel/", mfa_views.cancel, name="company-mfa-cancel"),
+    path("invitations/", views.invitations, name="company-invitations"),
+    path("invitations/<uuid:invitation_id>/revoke/", views.revoke, name="company-invitation-revoke"),
+    path("configuration/", views.configuration, name="company-configuration"),
+    path("members/", views.members, name="company-members"),
+    path("members/<int:account_id>/", views.member_edit, name="company-member-edit"),
+    path("history/", views.history, name="company-history"),
+    path("tasks/", task_views.tasks, name="company-tasks"),
+    path("connectors/", connector_views.pairing, name="company-connectors"),
+    path("connectors/<uuid:reference>/revoke/", connector_views.revoke, name="company-connector-revoke"),
+    path("tasks/<uuid:reference>/connector/end-interrupted/", connector_views.end_interrupted, name="company-connector-end"),
+    path("api/connectors/v1/status/", connector_views.status),
+    path("api/connectors/v1/start/", connector_views.start),
+    path("api/connectors/v1/observation/", connector_views.observation),
+    path("api/connectors/v1/feedback/", connector_views.feedback),
+    path("api/connectors/v1/task/", connector_views.task),
+    path("api/connectors/v1/conditional-select/", connector_views.conditional_select),
+    path("api/connectors/v1/conditional-claim/", connector_views.conditional_claim),
+    path("api/connectors/v1/conditional-settle/", connector_views.conditional_settle),
+    path("tasks/new/", task_views.new_task, name="company-task-new"),
+    path("tasks/<uuid:reference>/", task_views.detail, name="company-task-detail"),
+    path("tasks/<uuid:reference>/response/", task_views.action, {"kind": "response"}, name="company-task-response"),
+    path("tasks/<uuid:reference>/execution/", task_views.action, {"kind": "execution"}, name="company-task-execution"),
+    path("tasks/<uuid:reference>/result/", task_views.action, {"kind": "result"}, name="company-task-result"),
+    path("assets/style.css", views.stylesheet, name="company-style"),
+]

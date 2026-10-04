@@ -1,0 +1,11 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if task %}<p>Task <a href="{% url 'company-task-detail' task.reference %}">{{ task.task_id }}</a> · owner {{ task.owner.username }} · revision {{ task.revision }}</p><p>Saved suggestion {{ recommendation.decision.recommended_model|default_if_none:'Blocked' }}; original choice {{ recommendation.task.selected_model }}.</p>{% endif %}
+<p>Metadata only: no prompts, source code, model outputs, credentials, or private session access. Use short labels/references, not task content.</p>
+{% if kind == 'response' %}<p>This accept/reject action applies to one task only. Acceptance is neither success nor model/pilot approval. The response is immutable and must precede the actual-model report.</p>{% elif kind == 'execution' %}<p>Reporting does not execute a model. You can report another or unapproved model without authorizing it. Actual use is immutable; the eventual result is recorded separately.</p>{% elif kind == 'result' %}<p>Unknown remains unknown. Known quality needs an evidence reference. Corrections append a full new result and preserve earlier reports; the current result reference is supplied internally.</p>{% endif %}
+<form method="post">{% csrf_token %}{% include 'company/fields.html' %}<button type="submit">{% if kind == 'response' %}Save this one-task response{% elif kind == 'execution' %}Save reported model use{% elif kind == 'result' %}Save result without overwriting history{% else %}Get manual shadow suggestion{% endif %}</button></form>
+<datalist id="task-categories">{% for category in form.categories %}<option value="{{ category }}"></option>{% endfor %}</datalist>
+<datalist id="actual-models">{% for model in form.models %}<option value="{{ model }}"></option>{% endfor %}</datalist>
+<p><a href="{% url 'company-tasks' %}">Back to tasks</a></p>
+{% endblock %}

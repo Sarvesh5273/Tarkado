@@ -1,0 +1,7 @@
+{% extends 'company/base.html' %}{% block content %}
+<h1>Explicit experimental validation plan</h1><p>Choose scope/parameters on validation data, never held-out test results. No values here are production-approved thresholds.</p>
+<p>Choose the source before selecting work sessions: <a href="?source=synthetic">Synthetic demonstration</a> · <a href="?source=team">Manually declared team evidence</a>. Changing a label does not make held-out tests into validation data.</p>
+{% if not form.session_ids.field.choices %}<section class="empty"><h3>No work sessions for this source</h3><p>First record permitted tasks, responses, actual-model use, and results. Missing data is not success. You cannot create evidence by selecting a source label.</p><a href="{% url 'company-tasks' %}">Open tasks</a></section>{% endif %}
+<form method="post">{% csrf_token %}{% include 'company/fields.html' %}<button type="submit">Build category review</button></form>
+<p>Sessions and category references are resolved internally. All stored source records, result corrections, rejects, junior failures, and unknowns are retained by the existing review/learner.</p>
+{% endblock %}

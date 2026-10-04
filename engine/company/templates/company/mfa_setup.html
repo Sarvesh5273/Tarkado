@@ -1,0 +1,9 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h2>Authenticator setup — {{ company.name }}</h2>
+<p>Administrators and designated pilot approvers must confirm an authenticator before protected access. Optional enrollment makes MFA mandatory for that account too.</p>
+{% if has_factor %}<p>A confirmed factor already exists. Replacing it requires current MFA or a one-use backup recovery ticket. Your old factor is revoked only after the new one is confirmed.</p><p><a href="{% url 'company-mfa-verify' %}">Verify current factor</a> — <a href="{% url 'company-mfa-recover' %}">Recover a lost factor</a></p>{% endif %}
+{% if pending %}<p>An enrollment is pending. Its secret is not displayed again.</p><p><a href="{% url 'company-mfa-confirm' %}">Confirm pending factor</a> — <a href="{% url 'company-mfa-cancel' %}">Cancel pending enrollment</a></p>{% endif %}
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Begin authenticator enrollment</button></form>
+<p>This does not reset a forgotten password or create any pilot authorization.</p>
+{% endblock %}

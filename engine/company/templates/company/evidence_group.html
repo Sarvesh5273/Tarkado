@@ -1,0 +1,3 @@
+{% load company_ui %}
+<details class="card"><summary>{{ group.task_type|known }} / {{ group.model }} — {{ group.status|words }}; failures {{ group.confirmed_failures }}, unknown results {{ group.unknown_results }}, rejects {{ group.rejects }}</summary>
+<p>These are reported observations, not independently verified outcomes or a production gate. Non-senior failures are retained.</p>{% metadata group %}</details>

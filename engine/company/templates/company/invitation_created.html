@@ -1,0 +1,8 @@
+{% extends 'company/base.html' %}
+{% block content %}
+<h2>Private invitation for {{ invitation.username }}</h2>
+<p>This value is displayed once. Copy it into a private channel for the intended person. Do not put it in Git, URLs, logs, or public screenshots. Refreshing/reposting is not a retry mechanism.</p>
+<pre>{{ invitation_value }}</pre>
+<p>Expires at {{ invitation.expires_at|date:'c' }}. The recipient opens <code>/join/</code>, pastes this value, and chooses their own password.</p>
+<a href="{% url 'company-invitations' %}">Return to invitations</a>
+{% endblock %}

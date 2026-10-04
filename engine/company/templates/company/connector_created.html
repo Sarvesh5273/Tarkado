@@ -1,0 +1,4 @@
+{% extends 'company/base.html' %}{% block content %}<h1>Private pairing credential: {{ credential.name }}</h1>
+<p>Shown once for private transfer to the scoped OpenCode connector. Paste only into its credential pairing input, never into the coding prompt, Git, logs, URLs, chat, or screenshots. Refreshing does not recover this value; revoke/reissue if lost.</p>
+<pre id="connector-credential">{{ pairing_value }}</pre>
+<p>Repository {{ credential.scope.repository_ref }} · source {{ credential.scope.source_kind }} · expiry {{ credential.expires_at|date:'c' }}. It grants no administrator, pilot, or provider authority.</p><a href="{% url 'company-connectors' %}">Back to connector access</a>{% endblock %}
