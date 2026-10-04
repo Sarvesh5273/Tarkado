@@ -22,6 +22,16 @@ or authorized for real generation.** Company evidence, host compatibility, actua
 billing and task quality are not established by these tests. Full B-04/B-05/B-06
 completion remains pending for the software and validation items below.
 
+**Known-cost correction follow-up:** independently verified increases/decreases now
+append exact task/request/attempt revisions, with signed administrative review/fresh-
+MFA confirmation and scoped machine review/apply. Original settlements, failures,
+overruns and lifetime claims remain; decreases never auto-resume delivery. See
+[COST_CORRECTIONS.md](COST_CORRECTIONS.md), superseding earlier missing-correction notes.
+Metadata-only capture/repair rules remain unchanged in [TOOL_STATUS_CAPTURE.md](TOOL_STATUS_CAPTURE.md).
+Current regression verification: **838 Python / 47 JavaScript tests pass**, with the
+798 Python baseline retained and 40 new correction regressions. Earlier verification
+counts below are historical milestones, not installed-host/billing readiness claims.
+
 ## Implemented supported path
 
 - `engine/company/delivery.py`: concrete `NarrowDeliveryAdmissionVerifier`, exact
@@ -137,8 +147,11 @@ incomplete supported usage requires later independent billing reconciliation.
 Known usage calculations must match the exact envelope/model. Usage-free invoices,
 zero-cost cancellation claims and different costs require a separate typed
 `BillingVerifier` assessment bound to that exact obligation. An evidence-reference
-string cannot refund it. The verifier defaults to refusal. Known settlement is
-immutable; additional corrections after a known settlement remain unsupported.
+string cannot refund it. The verifier defaults to refusal. Known settlement remains
+immutable; separate append-only correction now requires independently checked evidence
+content and repeat verification. Current totals use validated history, not old-event
+edits. Late decreases cannot reactivate tasks, restore claims/slots or erase failures
+and earlier individual/cumulative overruns.
 
 Explicit owner close and complete known attempt settlement join back to the
 original conditional selection exactly once. Failures and full overruns remain,
@@ -277,12 +290,15 @@ fixture accounting checks, not real prices, savings or quality evidence.
 
 ## Remaining software versus deferred validation
 
-**Software still missing for the full build:** delivery terminal command/panel and
-standardized trusted startup/deployment wiring; approved tool/non-text/extra-charge
-envelopes for general coding tasks; direct physical-stream/recovery mapping;
-known-cost correction workflow; automatic subagent/new-run attribution; external
-alert notification transport/operational supervision. These are not validation
-checkboxes. The present text-only source refuses unsupported paths.
+**Software still missing for the full build:** continuous pilot-feedback handling;
+direct physical provider-stream/lost-delivery recovery mapping; automatic subagent/
+new-run attribution; external notifications/supervision; finer universal native tool/
+test/permission/interruption and physical-provider-attempt attribution; broader shell/
+remote/non-text/extra-charge envelopes. Positive company-specific real verifier
+integrations/evidence remain unsupplied. These are not validation checkboxes. Terminal/
+startup, bounded local functions, opt-in metadata capture and known-cost corrections
+are implemented in newer operating guides, not installed or real billing/tool-safety
+proof. Unsupported delivery still refuses.
 
 **Separately deferred real-world validation/configuration:** installed OpenCode
 plugin/peer/terminal and LiteLLM/provider lowering/conversion/ordering/retries;
@@ -315,7 +331,7 @@ installation, loading, private access, destructive retention or real provider ca
 Local logical commits are authorized. **No public push or release** until the
 owner selects a licence. All six earlier local commits and private stores remain.
 
-Final regression verification after the owner-review fixes: **725 Python /
+Historical regression verification after the owner-review fixes: **725 Python /
 26 JavaScript tests pass** (705 retained Python baseline + 20 new regressions),
 `git diff --check` passes, and existing assertions are retained. The Python suite
 also invokes JavaScript tests. Counts demonstrate regression coverage, not

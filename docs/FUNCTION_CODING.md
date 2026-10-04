@@ -15,6 +15,13 @@ controls; missing/refused/interrupted/gapped results block continuation. See
 [TOOL_STATUS_CAPTURE.md](TOOL_STATUS_CAPTURE.md), which supersedes the earlier
 missing-capture notes below without claiming universal native status support.
 
+**Accounting follow-up:** [COST_CORRECTIONS.md](COST_CORRECTIONS.md) documents independently
+verified append-only known-cost revisions, including late increases/decreases. Original
+provider/tool/result evidence and lifetime claims remain intact; decreases never resume
+pilots or change exact-bound repair/refusal rules.
+Current joined regression verification: **838 Python / 47 JavaScript tests pass**;
+the bounded-function milestone count below is historical, not installed-tool validation.
+
 ## Supported extension
 
 The original text-only envelope and serialization remain unchanged and still
@@ -166,7 +173,7 @@ Actual OpenCode/LiteLLM runtime/peer/response lowering/permissions, real model f
 support, local test-tool boundary, pricing/invoices/criteria and operator deployment
 remain **separately unverified**. This does not mark B-04/B-05/B-06 fully complete.
 
-Regression verification: **774 Python / 38 JavaScript tests pass**, with all
+Historical bounded-function verification: **774 Python / 38 JavaScript tests pass**, with all
 earlier assertions retained and `git diff --check` passing. Python also invokes
 JavaScript. Test counts do not establish actual tool safety or production readiness.
 

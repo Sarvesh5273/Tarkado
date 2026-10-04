@@ -72,6 +72,7 @@ def privacy_control(request, password, code, action, reason, expected_revision, 
 
 def delivery_summary(binding):
     from .delivery import state
+    from .billing_corrections import retained_overrun
     current = state(binding)
     envelope = binding.data["envelope"]
     result = {"binding_ref": str(binding.reference), "policy_model": envelope["model_id"], "gateway_model": envelope["gateway_model"],
@@ -79,6 +80,9 @@ def delivery_summary(binding):
             "known_cost_usd": current["known_cost_usd"], "unknown_attempts": current["unknown_attempts"],
             "attempt_reserved_usd": current["attempt_reserved_usd"], "remaining_task_usd": current["remaining_task_usd"],
             "closed": current["closed"], "requests": list(current["requests"].values()), "attempts": list(current["attempts"].values()),
+            "revision": current["revision"],
+            "corrections": [event for event in binding.journal if event["action"] == "correct_cost"],
+            "historical_cost_overrun": retained_overrun(binding, current),
             "usage_source": "authenticated_gateway_metadata", "provider_invoice_verified": False, "engineering_outcome_verified": False}
     if envelope.get("schema_version") == 2:
         result["local_tools"] = envelope["local_tools"]
@@ -121,6 +125,8 @@ def monitor(request):
             if summary["unknown_attempts"]: signals.append("unknown_provider_obligation")
             if any(attempt["outcome"] in ("failed", "retryable_failure") for attempt in summary["attempts"]): signals.append("provider_failure")
             if Decimal(summary["remaining_task_usd"]) < 0: signals.append("provider_budget_overrun")
+            if summary["historical_cost_overrun"]:
+                signals.append("historical_provider_cost_overrun")
             if "tool_capture" in summary:
                 signals.extend("tool_" + status for status in summary["tool_capture"]["negative_signals"])
                 if summary["tool_capture"]["pending_invocations"]: signals.append("tool_missing_result")

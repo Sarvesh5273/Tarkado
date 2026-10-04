@@ -237,7 +237,7 @@ def _current(gateway, binding, task_token, session_ref, retry_request_id=None):
     return envelope
 
 
-def state(binding, until=None):
+def state(binding, until=None, revision=None):
     data = binding.data
     fields = ("schema_version", "company_id", "deployment_id", "selection_sha256", "session_ref", "gateway_user_ref", "owner", "envelope", "task_cap_usd")
     object_fields(data, fields, fields)
@@ -252,7 +252,11 @@ def state(binding, until=None):
         or data["gateway_user_ref"] != binding.gateway.scope["user_mapping"].get(data["owner"]["developer_id"])):
         raise ValidationError("Delivery history differs from the original task/model/owner/budget selection.")
     requests, attempts, closed, previous, at = {}, {}, False, None, None
-    events = binding.journal if until is None else [event for event in binding.journal if _timestamp(event["timestamp"]) <= until]
+    historical_task_overrun, historical_attempt_overrun = False, False
+    if revision is not None and (type(revision) is not int or not 0 <= revision <= len(binding.journal)):
+        raise ValidationError("Delivery replay revision is missing or outside retained history.")
+    events = binding.journal if revision is None else binding.journal[:revision]
+    events = events if until is None else [event for event in events if _timestamp(event["timestamp"]) <= until]
     for sequence, event in enumerate(events, 1):
         fields = ("sequence", "timestamp", "gateway_ref", "action", "payload", "previous_sha256", "sha256")
         object_fields(event, fields, fields)
@@ -287,7 +291,8 @@ def state(binding, until=None):
             reserve = envelope.maximum(request["output_limit"])
             if reserve <= 0 or Decimal(payload["reserve_usd"]) != reserve or _money_total([held, reserve]) > cap:
                 raise ValidationError("Physical attempt has no justified pre-execution task budget reservation.")
-            attempts[payload["attempt_id"]] = {**payload, "cost_usd": None, "usage": None, "outcome": "pending", "latency_ms": None, "evidence_ref": None, "actual_model": None, "billing_assessment": None}
+            attempts[payload["attempt_id"]] = {**payload, "cost_usd": None, "usage": None, "outcome": "pending", "latency_ms": None, "evidence_ref": None, "actual_model": None, "billing_assessment": None,
+                "original_settlement": None, "cost_revision": None, "cost_head_sha256": None, "corrections": []}
         elif action == "settle":
             keys = ("attempt_id", "cost_usd", "usage", "outcome", "latency_ms", "evidence_ref", "actual_model", "billing_assessment")
             object_fields(payload, keys, keys)
@@ -318,6 +323,12 @@ def state(binding, until=None):
             if payload["actual_model"] is not None:
                 text(payload["actual_model"], "actual_model")
             row.update(payload)
+            if payload["cost_usd"] is not None:
+                row.update(original_settlement={key: event[key] for key in ("sequence", "timestamp", "sha256", "payload")},
+                           cost_revision=0, cost_head_sha256=event["sha256"])
+        elif action == "correct_cost":
+            from .billing_corrections import replay_correction
+            replay_correction(binding, attempts, event)
         elif action == "close":
             object_fields(payload, (), ())
             if closed:
@@ -325,13 +336,21 @@ def state(binding, until=None):
             closed = True
         else:
             raise ValidationError("Unsupported delivery history action.")
+        if action in ("settle", "correct_cost"):
+            obligation = _money_total([Decimal(row["cost_usd"] if row["cost_usd"] is not None else row["reserve_usd"]) for row in attempts.values()])
+            historical_task_overrun = historical_task_overrun or obligation > cap
+            historical_attempt_overrun = historical_attempt_overrun or any(row["cost_usd"] is not None and Decimal(row["cost_usd"]) > Decimal(row["reserve_usd"]) for row in attempts.values())
         previous, at = event["sha256"], now
     spent = _money_total([number(row["cost_usd"], "cost_usd") for row in attempts.values() if row["cost_usd"] is not None])
     held = _money_total([number(row["reserve_usd"], "reserve_usd") for row in attempts.values() if row["cost_usd"] is None])
-    return {"requests": requests, "attempts": attempts, "closed": closed or binding.connector_task.closed_at is not None, "known_cost_usd": str(spent),
+    cutoff = until if until is not None else at if revision is not None else None
+    owner_closed = binding.connector_task.closed_at is not None and (cutoff is None or binding.connector_task.closed_at <= cutoff)
+    return {"requests": requests, "attempts": attempts, "closed": closed or owner_closed, "known_cost_usd": str(spent),
             "unknown_attempts": sum(row["cost_usd"] is None for row in attempts.values()), "attempt_reserved_usd": str(held),
             "remaining_task_usd": str(_money_total([cap, spent.copy_negate(), held.copy_negate()])),
-            "obligation_usd": str(max(cap, _money_total([spent, held])))}
+            "obligation_usd": str(max(cap, _money_total([spent, held]))), "revision": len(events),
+            "historical_task_overrun": historical_task_overrun, "historical_attempt_overrun": historical_attempt_overrun,
+            "sha256": events[-1]["sha256"] if events else None}
 
 
 def _append(binding, gateway, action, payload):
@@ -348,7 +367,8 @@ def resume_blocked(runtime, at=None):
         if at is not None and not any(event["action"] == "select" and event["payload"]["selection_id"] == binding.selection_id and _timestamp(event["timestamp"]) <= at for event in runtime.journal["events"]):
             continue
         current = state(binding, until=at)
-        if any(row["outcome"] in ("unknown", "failed") for row in current["attempts"].values()) or Decimal(current["remaining_task_usd"]) < 0:
+        from .billing_corrections import retained_overrun
+        if any(row["outcome"] in ("unknown", "failed") for row in current["attempts"].values()) or Decimal(current["remaining_task_usd"]) < 0 or retained_overrun(binding, current):
             return True
     return False
 
@@ -421,6 +441,9 @@ def _finalize(binding, gateway):
     current = state(binding)
     if not current["closed"] or current["unknown_attempts"]:
         return
+    if binding.selection_id in selection._state(binding.runtime)["settlements"]:
+        return
     rows = list(current["attempts"].values())
     outcome = "failed" if any(row["outcome"] in ("failed", "retryable_failure") for row in rows) else "completed" if rows else "cancelled"
-    selection.delivery_event(binding, gateway, "delivery_settle", {"selection_id": binding.selection_id, "cost_usd": current["known_cost_usd"], "outcome": outcome})
+    selection.delivery_event(binding, gateway, "delivery_settle", {"selection_id": binding.selection_id, "cost_usd": current["known_cost_usd"], "outcome": outcome,
+        "delivery_revision": current["revision"], "delivery_sha256": current["sha256"]})

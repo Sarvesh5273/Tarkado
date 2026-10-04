@@ -161,6 +161,10 @@ OPERATIONS = {
     "close": (delivery.close_delivery, ("binding_ref",)),
 }
 
+from .billing_corrections import INPUT_FIELDS, review_machine, correct_machine
+OPERATIONS["review-cost"] = (review_machine, ("binding_ref",) + INPUT_FIELDS)
+OPERATIONS["correct-cost"] = (correct_machine, ("binding_ref", "expected_assessment") + INPUT_FIELDS)
+
 
 @transaction.atomic
 def describe(gateway_token, task_token, binding_ref, session_ref, gateway_user_ref):
@@ -227,3 +231,11 @@ def settle_view(request): pass
 
 @machine("close")
 def close_view(request): pass
+
+
+@machine("review-cost")
+def review_cost_view(request): pass
+
+
+@machine("correct-cost")
+def correct_cost_view(request): pass

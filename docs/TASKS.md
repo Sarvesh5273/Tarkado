@@ -18,6 +18,69 @@ Target the existing first integration choice: OpenCode V2 with documented APIs
 and company-managed API/gateway credentials. Do not attempt to support every
 coding client or build another general-purpose gateway to call this finished.
 
+### Current build — known-cost corrections (2026-10-04)
+
+**Focused scope:** auditable independently verified revisions of known delivery costs,
+on OpenCode V2 → existing LiteLLM Proxy → company-managed OpenAI API. No broader tools,
+replacement gateway or new feedback exemptions. This section supersedes older statuses.
+
+- [x] Recover workflow/decisions/tasks and delivery/startup/function/tool-status code
+  and docs; inspect/preserve all 13 prior local commits and uncommitted document work.
+- [x] Reproduce exact known-settlement retry and changed-cost refusal even with a
+  controlled billing verifier; retain the legacy assertion.
+- [x] Extend independent reconciliation with checked evidence content and repeat
+  verification, never amount/reference/checkbox truth.
+- [x] Append exact task/request/attempt correction history and actual actor/time/
+  revisions; preserve original settlements, outcomes, claims and lifetime limits.
+- [x] Derive complete current costs with exact decimals, duplicate/stale/branch/
+  concurrency protection and historical delivery-prefix replay.
+- [x] Allow authorized late increases/decreases without reactivation; retain failures
+  and individual/cumulative overruns after decreases.
+- [x] Add signed guided browser review/fresh-MFA confirmation, scoped machine review/
+  apply and readable history using existing administrative/accounting authority.
+- [x] Finish consistent-snapshot baseline/full regression verification and record results.
+- [x] Make a separate logical local commit (this cost-correction batch). No public push until licence selection.
+
+**Final verification:** **838 Python / 47 JavaScript tests pass**, retaining the
+recovered **798 Python / 47 JavaScript** baseline plus 40 new focused correction
+regressions. `git diff --check` passes; all earlier assertions remain unchanged. Python
+also invokes JavaScript, so these are not independent certifications. The first full
+baseline attempt was invalidated by editing source during subprocess checks (two
+failures, one error), not claimed passing. The isolated original `1a072c6` archive then
+passed all 798 tests using the existing environment; final current source remained
+unchanged during its full run. Intermediate checks caught UUID/helper/decimal-display
+errors, a stale test-side object, cumulative-overrun retention and owner-close timestamp
+replay. Their assertions were retained and fixes verified. No migration was edited or
+owner store changed. All prior commits and original uncommitted handoff/documentation
+work remain preserved; only this batch's documentation hunks are committed. Operating
+contract:
+[COST_CORRECTIONS.md](COST_CORRECTIONS.md).
+
+**Remaining software — separate work, not automatically implemented:**
+
+| Work | Current gap |
+| --- | --- |
+| Continuous pilot-feedback handling | Acceptance freshness and exact-bound intermediate repair remain narrow exceptions; no silent refit, broader exemptions or automatic readiness/pilot expansion. |
+| External notifications/operational supervision | Dashboard signals exist; external alerts, escalation and process supervision are missing. |
+| Direct physical streaming/recovery | Buffered single-response client streaming exists; direct provider-stream and lost-delivery recovery mapping remain unsupported. |
+| Task/subagent attribution | Explicit fresh-root tasks exist; automatic subagent/new-run admission/capture remain unsupported. |
+| Fine native tool/provider attribution | Generic metadata/reviewed negatives exist; universal native permission/interruption/test labels and physical-provider-attempt linkage remain unsupported. |
+| Broader request/tool scope | Unrestricted shell, paid/remote/hosted tools and non-text/extra-charge envelopes remain outside narrow delivery. No runner/gateway is added. |
+| Real verifier integrations | Interfaces/startup exist; positive company-specific readiness/host/billing integrations and independent evidence remain unsupplied. Defaults refuse. |
+
+**Deferred validation, separate from missing software:** installed OpenCode/LiteLLM
+peers/loading/lowering/callback/permission/bypass/retry behavior; approved real company
+identity, invoices/prices/ceilings/readiness/outcomes; private-session/data scope;
+TLS/logging/storage/backup/security/capacity/operator checks. No dependencies, plugin
+loading, private-session/store access, owner migration/change, real calls, activation
+or public push are performed. Counts are regressions, not readiness/quality/savings.
+
+## Historical build milestones and earlier handoffs
+
+Earlier counts/checklists describe their then-current state, not today's remaining work.
+`HANDOFF_DELIVERY.md` is historical; current tasks/newer decisions supersede its next-build
+instructions. The earlier uncommitted handoff/documentation work remains preserved.
+
 ### Focused acceptance/freshness correction — 2026-10-04
 
 Baseline before edits: **737 Python / 33 JavaScript tests pass**. Reproduced through

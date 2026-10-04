@@ -47,10 +47,10 @@ def _state(runtime):
         integer(event["sequence"], "sequence")
         if event["sequence"] != sequence or event["previous_sha256"] != previous or event["sha256"] != _fingerprint({key: value for key, value in event.items() if key != "sha256"}) or timestamp and at < timestamp:
             raise ValidationError("Selection journal sequence/time/content is inconsistent; history cannot be reset.")
-        action = choice(event["action"], "selection_action", ("activate", "pause", "resume", "revoke", "rollback", "select", "claim", "settle", "monitor", "delivery_monitor", "delivery_settle"))
+        action = choice(event["action"], "selection_action", ("activate", "pause", "resume", "revoke", "rollback", "select", "claim", "settle", "monitor", "delivery_monitor", "delivery_settle", "delivery_cost_correction"))
         payload = event["payload"]
         actor = event["actor"]
-        if action in ("delivery_monitor", "delivery_settle"):
+        if action in ("delivery_monitor", "delivery_settle", "delivery_cost_correction"):
             # A gateway is a machine principal, not a developer or human approver.
             from .models import DeliveryBinding, GatewayCredential
             from .delivery import state as delivery_state
@@ -66,15 +66,37 @@ def _state(runtime):
                     raise ValidationError("Only active delivery can be paused by monitoring.")
                 state["status"] = "paused"
             else:
-                object_fields(payload, ("selection_id", "cost_usd", "outcome", "binding_ref"), ("selection_id", "cost_usd", "outcome", "binding_ref"))
+                keys = ("selection_id", "cost_usd", "outcome", "binding_ref") if action == "delivery_settle" else (
+                    "selection_id", "cost_usd", "binding_ref", "correction_id", "correction_sha256", "delivery_revision", "delivery_sha256")
+                object_fields(payload, keys + ("delivery_revision", "delivery_sha256"), keys)
                 key = payload["selection_id"]
-                delivery = delivery_state(binding)
+                # Recheck the exact historical prefix, not today's corrected total.
+                if "delivery_revision" in payload:
+                    delivery = delivery_state(binding, revision=payload["delivery_revision"], until=at)
+                    if delivery["sha256"] != payload.get("delivery_sha256") or payload["delivery_revision"] == 0 or _timestamp(binding.journal[payload["delivery_revision"] - 1]["timestamp"]) > at:
+                        raise ValidationError("Selection accounting differs from its historical delivery revision.")
+                else:
+                    # Legacy initial settlements predate correction events. Even
+                    # equal clock timestamps cannot pull a later correction back.
+                    original_end = next((index for index, item in enumerate(binding.journal) if item["action"] == "correct_cost"), len(binding.journal))
+                    delivery = delivery_state(binding, until=at, revision=original_end)
                 rows = list(delivery["attempts"].values())
                 expected_outcome = "failed" if any(row["outcome"] in ("failed", "retryable_failure") for row in rows) else "completed" if rows else "cancelled"
-                if (key != binding.selection_id or key in state["settlements"] or not delivery["closed"] or delivery["unknown_attempts"]
-                    or number(payload["cost_usd"], "cost_usd") != Decimal(delivery["known_cost_usd"]) or payload["outcome"] != expected_outcome):
+                if key != binding.selection_id or number(payload["cost_usd"], "cost_usd") != Decimal(delivery["known_cost_usd"]):
                     raise ValidationError("Gateway settlement differs from closed complete attempt accounting.")
-                state["settlements"][key] = {k: payload[k] for k in ("selection_id", "cost_usd", "outcome")}
+                if action == "delivery_settle":
+                    if key in state["settlements"] or not delivery["closed"] or delivery["unknown_attempts"] or payload["outcome"] != expected_outcome:
+                        raise ValidationError("Gateway settlement differs from closed complete attempt accounting.")
+                    state["settlements"][key] = {k: payload[k] for k in ("selection_id", "cost_usd", "outcome")}
+                else:
+                    correction = binding.journal[payload["delivery_revision"] - 1]
+                    if (correction["action"] != "correct_cost" or correction["sha256"] != payload["correction_sha256"]
+                        or correction["payload"]["correction_id"] != payload["correction_id"]
+                        or correction["payload"]["pilot_revision"] != sequence - 1
+                        or any(old["action"] == action and old["payload"].get("correction_sha256") == payload["correction_sha256"] for old in data["events"][:sequence - 1])):
+                        raise ValidationError("Selection cost correction has no exact unique delivery correction.")
+                    if key in state["settlements"]:
+                        state["settlements"][key] = {**state["settlements"][key], "cost_usd": payload["cost_usd"]}
                 if state["status"] == "active" and (expected_outcome == "failed" or Decimal(payload["cost_usd"]) > Decimal(state["decisions"][key]["reserve_usd"])):
                     state["status"] = "paused"
             state["revision"] = sequence
@@ -187,12 +209,12 @@ def _state(runtime):
 def accounting(runtime, state=None, include_delivery=True):
     state = state or _state(runtime)
     scope = runtime.authorization.data["scope"]
-    spent = _money_total([Decimal(row["cost_usd"]) for row in state["settlements"].values()])
     pending = {key: row for key, row in state["decisions"].items() if key not in state["settlements"]}
     from .models import DeliveryBinding
     from .delivery import state as delivery_state
-    obligations = {row.selection_id: Decimal(delivery_state(row)["obligation_usd"]) for row in DeliveryBinding.objects.filter(runtime=runtime)
-                   if row.selection_id in pending} if include_delivery else {}
+    deliveries = {row.selection_id: delivery_state(row) for row in DeliveryBinding.objects.filter(runtime=runtime)} if include_delivery else {}
+    spent = _money_total([Decimal(deliveries[key]["known_cost_usd"] if key in deliveries else row["cost_usd"]) for key, row in state["settlements"].items()])
+    obligations = {key: Decimal(row["obligation_usd"]) for key, row in deliveries.items() if key in pending}
     held = _money_total([max(Decimal(row["reserve_usd"]), obligations.get(key, Decimal(0))) for key, row in pending.items()])
     committed = _money_total([spent, held])
     return {"selected_tasks": len(state["decisions"]), "claimed_tasks": len(state["claims"]), "pending_tasks": len(pending),

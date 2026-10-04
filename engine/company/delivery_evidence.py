@@ -20,6 +20,11 @@ def observations(company, source_kind):
         # Read all retained settlements, not only the latest accounting status.
         # Later billing reconciliation must not erase a timeout/failure/retry.
         for event in binding.journal:
+            if event["action"] == "correct_cost":
+                payload = event["payload"]
+                if Decimal(payload["cost_usd"]) > Decimal(current["attempts"][payload["attempt_id"]]["reserve_usd"]):
+                    signals.append("provider_cost_overrun")
+                continue
             if event["action"] != "settle":
                 continue
             payload = event["payload"]
@@ -38,7 +43,7 @@ def observations(company, source_kind):
             if payload["usage"] is not None and (payload["usage"]["input_tokens"] > envelope["input_token_ceiling"]
                 or payload["usage"]["output_tokens"] > request["output_limit"]):
                 signals.append("provider_usage_bound_exceeded")
-        if Decimal(current["remaining_task_usd"]) < 0:
+        if Decimal(current["remaining_task_usd"]) < 0 or current["historical_task_overrun"]:
             signals.append("task_budget_overrun")
         result.append({"binding_ref": str(binding.reference), "task_ref": str(task.reference), "task_type": task.request["task_type"],
             "repository_ref": task.repository_ref, "owner": binding.data["owner"], "selection_id": binding.selection_id,

@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import re
 
 from django.conf import settings
 from django.utils import timezone
@@ -17,15 +18,19 @@ class BillingAssessment:
     verifier_id: str
     verified_at: str
     valid_until: str
+    evidence_sha256: str | None = None
 
     def to_dict(self):
-        return {key: getattr(self, key) for key in self.__dataclass_fields__}
+        # Preserve the original unknown-cost assessment format when no snapshot exists.
+        return {key: getattr(self, key) for key in self.__dataclass_fields__ if key != "evidence_sha256" or self.evidence_sha256 is not None}
 
     @classmethod
     def from_dict(cls, value):
         fields = tuple(cls.__dataclass_fields__)
-        result = cls(**object_fields(value, fields, fields))
-        for key in fields: text(getattr(result, key), key)
+        result = cls(**object_fields(value, fields, fields[:-1]))
+        for key in fields[:-1]: text(getattr(result, key), key)
+        if result.evidence_sha256 is not None and (not isinstance(result.evidence_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", result.evidence_sha256)):
+            raise ValidationError("Billing evidence snapshot must have an exact SHA-256 fingerprint.")
         if _timestamp(result.valid_until) <= _timestamp(result.verified_at):
             raise ValidationError("Billing reconciliation has no positive verified interval.")
         return result
@@ -34,7 +39,11 @@ class BillingAssessment:
 class BillingVerifier(ABC):
     @abstractmethod
     def verify(self, request) -> BillingAssessment:
-        """Check actual provider/accounting evidence for this exact obligation, not a submitted checkbox/reference."""
+        """Independently check the exact obligation. For known-cost corrections,
+        also return a fingerprint of the evidence actually checked, and refuse
+        changed account/attempt ownership, superseded invoices or unverified amounts.
+        A submitted amount, checkbox, reference or evidence hash is never truth.
+        """
         raise NotImplementedError
 
 
@@ -45,7 +54,7 @@ def reconciliation_request(binding, attempt, payload):
             "settlement": {key: value for key, value in payload.items() if key != "billing_assessment"}}
 
 
-def verify(request):
+def verify(request, expected=None, require_snapshot=False):
     verifier = getattr(settings, "TARKADO_BILLING_VERIFIER", None)
     if not isinstance(verifier, BillingVerifier):
         raise ValidationError("Independent billing reconciliation is unconfigured. Unknown cost stays unknown; a reference cannot refund it.")
@@ -60,4 +69,12 @@ def verify(request):
     assessment = BillingAssessment.from_dict(assessment.to_dict())
     if assessment.request_sha256 != _fingerprint(request) or not _timestamp(assessment.verified_at) <= timezone.now() < _timestamp(assessment.valid_until):
         raise ValidationError("Billing assessment is wrong-bound or expired.")
+    if require_snapshot and assessment.evidence_sha256 is None:
+        raise ValidationError("Known-cost correction requires independently checked billing evidence content, not only a reference.")
+    if expected is not None:
+        previous = BillingAssessment.from_dict(expected)
+        fields = ("request_sha256", "evidence_ref", "verifier_id", "evidence_sha256")
+        if (any(getattr(previous, key) != getattr(assessment, key) for key in fields)
+            or not _timestamp(previous.verified_at) <= timezone.now() < _timestamp(previous.valid_until)):
+            raise ValidationError("Reviewed billing evidence changed or expired; review the correction again.")
     return assessment.to_dict()

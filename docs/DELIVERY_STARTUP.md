@@ -21,6 +21,16 @@ delivery source. Generic V2 statuses and reviewed structured negatives are captu
 native missing permission/interruption events stay unknown. No actual plugin was
 loaded or installed-host validation performed by this follow-up.
 
+**Cost correction follow-up:** [COST_CORRECTIONS.md](COST_CORRECTIONS.md) adds signed
+protected review/fresh-MFA confirmation and scoped-machine correction receipts. Original
+known settlements stay immutable. Startup still supplies no positive billing truth;
+real `BillingVerifier` implementations must return checked evidence-content fingerprints
+for corrections and recheck them on confirmation. Legacy unknown-cost proof remains
+supported. Lower costs never reactivate pilots/tasks.
+Current joined regression verification: **838 Python / 47 JavaScript tests pass**;
+earlier startup/acceptance counts below describe those historical batches. No actual
+OpenCode/LiteLLM loading or real billing validation is claimed.
+
 ## What the new terminal source does
 
 The separate private package at `integrations/opencode/delivery/` exports a server
@@ -242,9 +252,11 @@ fake-provider delivery/settlement tests remain intact.
 
 Not exercised: installed OpenCode rendering/peers, actual LiteLLM instance loading/
 lowering/logging/retries/response conversion, real verifier evidence/pricing/
-invoices, company TLS/private-session/provider operations. Tool-using coding,
-direct provider-stream recovery, known-cost corrections and external notifications
-remain separate software work. No production-readiness or savings claim follows.
+invoices, company TLS/private-session/provider operations. Broader shell/remote/extra-
+charge support, direct provider-stream recovery, continuous feedback, finer native
+attribution and external notifications/supervision remain separate software work.
+Narrow functions, metadata capture and known-cost corrections are implemented in their
+follow-up guides; no production-readiness or savings claim follows.
 
 Primary references checked: official OpenCode V2
 [CLI plugins](https://opencode.ai/v2/docs/build/plugins/cli/),
@@ -253,6 +265,6 @@ Primary references checked: official OpenCode V2
 [configuration](https://opencode.ai/v2/docs/config/), plus LiteLLM's
 [callback-instance/pre-call documentation](https://docs.litellm.ai/docs/proxy/call_hooks).
 
-Regression verification after the acceptance fix: **757 Python / 33 JavaScript tests pass**; the original
+Historical regression verification after the acceptance fix: **757 Python / 33 JavaScript tests pass**; the original
 assertions are retained and `git diff --check` passes. Python also runs JavaScript
 tests. These numbers are regression checks, not host/billing/production evidence.

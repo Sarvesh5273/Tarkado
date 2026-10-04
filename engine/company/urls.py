@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import connector_views, control_views, delivery_views, learning_views, mfa_views, operations_views, selection_views, task_views, views
+from . import billing_views, connector_views, control_views, delivery_views, learning_views, mfa_views, operations_views, selection_views, task_views, views
 
 handler403 = views.forbidden
 handler404 = views.not_found
@@ -21,6 +21,7 @@ urlpatterns = [
     path("privacy/", operations_views.privacy, name="company-privacy-controls"),
     path("gateways/", operations_views.gateways, name="company-gateways"),
     path("gateways/<uuid:reference>/revoke/", operations_views.revoke_gateway, name="company-gateway-revoke"),
+    path("delivery/<uuid:reference>/correct-cost/", billing_views.correction, name="company-cost-correction"),
     path("learning/reviews/<uuid:reference>/publish/", learning_views.publish, name="company-learning-publish"),
     path("pilots/reviews/<uuid:reference>/", control_views.review_detail, name="company-review-detail"),
     path("pilots/reviews/<uuid:reference>/authorize/", control_views.approve, name="company-pilot-authorize"),
@@ -62,6 +63,8 @@ urlpatterns = [
     path("api/delivery/v1/attempt/", delivery_views.attempt_view),
     path("api/delivery/v1/settle/", delivery_views.settle_view),
     path("api/delivery/v1/close/", delivery_views.close_view),
+    path("api/delivery/v1/review-cost/", delivery_views.review_cost_view),
+    path("api/delivery/v1/correct-cost/", delivery_views.correct_cost_view),
     path("tasks/new/", task_views.new_task, name="company-task-new"),
     path("tasks/<uuid:reference>/", task_views.detail, name="company-task-detail"),
     path("tasks/<uuid:reference>/response/", task_views.action, {"kind": "response"}, name="company-task-response"),

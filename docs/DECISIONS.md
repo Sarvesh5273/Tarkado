@@ -278,3 +278,29 @@ contract; native paths lacking an after event remain unknown. Do not scan output
 or error text, infer provider-attempt linkage, grant permission or run tools.
 No installation/private access/provider call/deployment/public push is approved
 by this implementation decision. See `docs/TOOL_STATUS_CAPTURE.md`.
+
+## Known delivery-cost corrections — owner-requested build 2026-10-04
+
+Implement auditable corrections of previously known costs, not broader tools or another
+gateway. Keep original settlements immutable; append independent billing proof to the
+exact task/request/physical attempt. Amounts, references, checkboxes or fingerprints
+alone cannot establish truth. Bind checked evidence content and history/revisions;
+verify again on applying the exact reviewed correction.
+
+Reuse current scoped machine accounting and existing `can_manage_company` administrator
+operating controls with signed review and fresh password/authenticator confirmation.
+No new permission, senior/developer feedback exemption, manual bound-cost truth override
+or pilot-approval authority is added. Record actual machine/human actor separately from
+the original gateway/task binding.
+
+Derive complete exact current costs from validated append-only history. Preserve original
+evidence/outcomes, duplicate receipt semantics, individual/cumulative overruns, negative
+budgets, task slots, lifetime limits and one-use claims. Authorized late increases and
+decreases after close/withdrawal never auto-resume pilots or reactivate delivery. Unknown
+reconciliation and intermediate-tool repair rules remain unchanged.
+
+Controlled independent receipts only: no installation, private-session/store access,
+owner-store changes, provider/model calls, activation or public push. Continuous feedback,
+external notifications/supervision and other remaining software are separate in `TASKS.md`;
+real verifier/installed-host/evidence/deployment validation stays deferred. See
+[COST_CORRECTIONS.md](COST_CORRECTIONS.md).
