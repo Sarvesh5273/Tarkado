@@ -8,12 +8,14 @@ const canonical = value => Array.isArray(value) ? value.map(canonical) : value &
 const exact = (left, right) => JSON.stringify(canonical(left)) === JSON.stringify(canonical(right))
 
 export class FreshSessionDeliveryAdapter {
-  constructor({ company, session, gatewayRef, providerID, gatewayOrigin }) {
+  constructor({ company, session, gatewayRef, providerID, gatewayOrigin, outputLimit }) {
     this.company = company
     this.session = session
     this.descriptor = null
     this.gatewayRef = gatewayRef
     this.providerID = providerID
+    if (outputLimit !== undefined && (!Number.isSafeInteger(outputLimit) || outputLimit < 1)) throw new Error("Explicit positive output limit is required.")
+    this.outputLimit = outputLimit
     const origin = new URL(gatewayOrigin)
     if (origin.protocol !== "https:" || origin.username || origin.password || origin.search || origin.hash || origin.pathname !== "/") {
       throw new Error("Delivery needs the exact operator-approved company gateway HTTPS origin.")
@@ -89,6 +91,7 @@ export class FreshSessionDeliveryAdapter {
       delete body.max_tokens
     }
     if (body.max_completion_tokens === undefined) throw new Error("An explicit reviewed output bound is required.")
+    if (this.outputLimit !== undefined && body.max_completion_tokens > this.outputLimit) throw new Error("Wire output cap exceeds the explicitly confirmed task limit.")
     if (body.stream === true) {
       if (body.stream_options && Object.keys(body.stream_options).some(key => key !== "include_usage")) throw new Error("Unknown streaming options refused.")
       body.stream_options = { include_usage: true }
@@ -107,6 +110,14 @@ export class FreshSessionDeliveryAdapter {
 
   websocket(event) {
     if (event.sessionID === this.sessionID) throw new Error("WebSocket delivery has no supported billing/attempt contract.")
+  }
+
+  prepareOptions(event) {
+    if (event.sessionID !== this.sessionID) return
+    if (!this.binding || !exact(event.model, this.binding.model)) throw new Error("Fixed task model changed; no continuation or auxiliary model switching.")
+    if (this.outputLimit === undefined) throw new Error("This task has no explicit outgoing output limit.")
+    if (event.options.maxTokens !== undefined && (!Number.isSafeInteger(event.options.maxTokens) || event.options.maxTokens < 1)) throw new Error("Unknown/invalid output override refused.")
+    event.options.maxTokens = Math.min(event.options.maxTokens ?? this.outputLimit, this.outputLimit)
   }
 }
 

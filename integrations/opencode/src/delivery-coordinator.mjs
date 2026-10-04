@@ -9,18 +9,28 @@ export class DeliveryCoordinator {
     this.company = company
     this.session = session
     this.location = fingerprint(directory)
+    this.directory = directory
     this.options = { company, session, gatewayRef, providerID, gatewayOrigin }
     this.adapters = new Map()
+    this.links = new Map()
+    this.starts = new Map()
   }
 
-  async connect() { return this.company.call("status", { location_sha256: this.location }) }
+  async connect() {
+    const result = await this.company.call("delivery-options", { location_sha256: this.location })
+    return { ...result, gateway_ref: this.options.gatewayRef }
+  }
 
   async newTask(input) {
     if (Object.hasOwn(input, "sessionID")) throw new Error("Delivery cannot reuse or switch an active session.")
-    const adapter = new FreshSessionDeliveryAdapter(this.options)
-    const linked = await this.company.call("start", { client_task_id: randomUUID(), session_ref: adapter.pendingSessionReference(),
+    const clientTaskID = input.clientTaskID ?? randomUUID()
+    if (this.starts.has(clientTaskID)) throw new Error("This explicit start was already submitted. Inspect its retained task; do not mint another claim on a retry.")
+    this.starts.set(clientTaskID, true)
+    const adapter = new FreshSessionDeliveryAdapter({ ...this.options, outputLimit: input.outputLimit })
+    const linked = await this.company.call("start", { client_task_id: clientTaskID, session_ref: adapter.pendingSessionReference(),
       location_sha256: this.location, task_label: input.taskLabel, task_type: input.taskType, risk_tags: input.riskTags,
       selected_model: input.selectedModel, required_tools: [], context_tokens: input.contextTokens, boundary: "new_task" })
+    this.links.set(adapter.pendingSessionReference(), linked.connector_task_ref)
     const request = { selection_id: randomUUID(), task: linked.conditional_task_request,
       repository_ref: input.repositoryRef, boundary: "new_task", reserve_usd: input.taskCapUSD, override_model: input.overrideModel ?? null }
     adapter.setDescriptor({ request, scopeRef: input.scopeRef, connectorTaskRef: linked.connector_task_ref,
@@ -40,14 +50,36 @@ export class DeliveryCoordinator {
 
   websocket(event) { this.adapters.get(event.sessionID)?.websocket(event) }
 
+  prepareOptions(event) {
+    const adapter = this.adapters.get(event.sessionID)
+    if (adapter) adapter.prepareOptions(event)
+  }
+
+  async state(sessionID) {
+    const ref = this.links.get(fingerprint(sessionID))
+    if (!ref) return { task: null, delivery: null, executionSent: false, problem: "No task bound by this source instance. Use the company browser for interrupted/restarted task recovery." }
+    return this.company.call("delivery-task", { connector_task_ref: ref, location_sha256: this.location })
+  }
+
+  async feedback(input) {
+    const ref = this.links.get(fingerprint(input.sessionID))
+    if (!ref) throw new Error("This source instance does not own the requested task.")
+    return this.company.call("feedback", { connector_task_ref: ref, location_sha256: this.location,
+      action: input.action, expected_revision: input.expectedRevision, value: input.value })
+  }
+
   async end(sessionID) {
     const adapter = this.adapters.get(sessionID)
     if (!adapter) throw new Error("No new delivery task belongs to this source instance; use browser interrupted-close recovery.")
+    const host = await this.session.get({ sessionID })
+    if (host.location?.directory !== this.directory || host.parentID || host.fork) throw new Error("End only this exact paired root task.")
     const ref = adapter.descriptor.connectorTaskRef
     const task = await this.company.call("task", { connector_task_ref: ref, location_sha256: this.location })
     if (task.closed) return task
-    return this.company.call("observation", { connector_task_ref: ref, location_sha256: this.location, event_id: randomUUID(),
+    // A repeated close after a lost response uses exactly the same event identity.
+    adapter.closeEvent ??= { connector_task_ref: ref, location_sha256: this.location, event_id: randomUUID(),
       sequence: task.sequence + 1, payload: { observation_kind: "close", request_kind: "unknown", model: null,
-        http_status: null, attempt: null, retry: null, coverage_status: "limited_hook_coverage" } })
+        http_status: null, attempt: null, retry: null, coverage_status: "limited_hook_coverage" } }
+    return this.company.call("observation", adapter.closeEvent)
   }
 }

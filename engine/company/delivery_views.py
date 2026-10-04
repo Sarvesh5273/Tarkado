@@ -19,6 +19,61 @@ from .connectors import _link
 
 
 @delegated
+def options(credential, member, value):
+    """Guided metadata choices are not execution permission or human approval."""
+    from .models import GatewayCredential, ScopedSelectionRuntime
+    from .services import member_snapshot, current_member
+    from .live_authorization import live_guard
+    from . import selection
+    from .mfa import MFAState
+    from .recovery import _password_ref
+    from django.utils import timezone
+    object_fields(value, ("location_sha256",), ("location_sha256",))
+    if value["location_sha256"] != credential.scope["location_sha256"]:
+        raise PermissionDenied("Delivery choices are outside this paired repository/directory.")
+    scopes = []
+    if credential.scope["source_kind"] == "team":
+        for runtime in ScopedSelectionRuntime.objects.filter(authorization__company=member.company).select_related("authorization"):
+            approval = runtime.authorization
+            scope = approval.data["scope"]
+            if scope["repository_ref"] != credential.scope["repository_ref"] or member.developer_id not in scope["developer_ids"]:
+                continue
+            current = selection._state(runtime)
+            guard = live_guard(approval, member.company, allow_future_recommendations=True)
+            routes = []
+            for route in approval.data["routes"]:
+                try:
+                    envelope = delivery.envelope_for(member.company, route["model"])
+                except ValidationError:
+                    continue
+                routes.append({"task_type": route["task_type"], "model": route["model"], "output_token_ceiling": envelope.output_token_ceiling,
+                               "minimum_attempt_reserve_usd": str(envelope.maximum(1))})
+            scopes.append({"scope_ref": str(approval.reference), "pilot_id": scope["pilot_id"], "status": current["status"],
+                "authority_current": guard["status"] == "current", "routes": routes, "accounting": selection.accounting(runtime, current)})
+    gateways = []
+    for gateway in GatewayCredential.objects.filter(company=member.company, revoked_at__isnull=True, expires_at__gt=timezone.now()):
+        if gateway.scope["repository_ref"] != credential.scope["repository_ref"] or member.developer_id not in gateway.scope["user_mapping"]:
+            continue
+        try:
+            issuer = current_member(gateway.issuer, "manage")
+            if (gateway.scope["issuer"] != member_snapshot(issuer) or gateway.scope["password_ref"] != _password_ref(issuer.user)
+                or gateway.scope["mfa_generation"] != MFAState.objects.get(user=issuer.user).generation):
+                continue
+        except PermissionDenied:
+            continue
+        gateways.append({"gateway_ref": str(gateway.reference), "gateway_id": gateway.gateway_id, "expires_at": gateway.expires_at.isoformat()})
+    from engine.schemas import Policy
+    policy = Policy.from_dict(member.company.policy)
+    required = ("actual_model", "request_kind", "cost_usd", "latency_ms", "input_tokens", "output_tokens", "cached_input_tokens", "reasoning_tokens")
+    return {"schema_version": 1, "company_id": str(member.company.company_id), "deployment_id": str(member.company.deployment_id),
+            "company_revision": member.company.revision, "developer_id": member.developer_id, "repository_ref": credential.scope["repository_ref"],
+            "source_kind": credential.scope["source_kind"], "scopes": scopes, "gateways": gateways,
+            "models": [model.model_id for model in policy.models if model.approved],
+            "collection_supported": set(required).issubset(credential.scope["collection_fields"]),
+            "new_reservation": False, "execution_sent": False, "note": "Choices only. Each new task still rechecks independent verification, separate human approval and shared accounting."}
+
+
+@delegated
 def bind(credential, member, value):
     fields = ("scope_ref", "selection_id", "connector_task_ref", "location_sha256", "gateway_ref")
     object_fields(value, fields, fields)
@@ -62,6 +117,19 @@ def preflight(credential, member, value):
     return {"requestID": request["selection_id"], "newTask": proof.new_task_verified,
             "capEnforced": proof.provider_cap_enforced, "atomicModelBinding": proof.atomic_model_binding_supported,
             "new_reservation": False, "execution_sent": False}
+
+
+@delegated
+def task(credential, member, value):
+    from .connectors import task_state
+    from .models import DeliveryBinding
+    from .operations import delivery_summary
+    fields = ("connector_task_ref", "location_sha256")
+    object_fields(value, fields, fields)
+    link = _link(credential, value["connector_task_ref"], value["location_sha256"])
+    binding = DeliveryBinding.objects.filter(connector_task=link).first()
+    return {"task": task_state(link), "delivery": delivery_summary(binding) if binding else None,
+            "execution_sent": False, "outcome_verified": False}
 
 
 OPERATIONS = {

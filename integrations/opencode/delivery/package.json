@@ -1,0 +1,7 @@
+{
+  "name": "tarkado-opencode-delivery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {".": "./index.mjs", "./tui": "./tui.tsx", "./rpc": "./rpc.mjs"}
+}

@@ -3,6 +3,13 @@
 **Updated:** 2026-10-04. Accepted path remains **OpenCode V2 → existing LiteLLM
 Proxy → company-managed OpenAI API** (AD-01–AD-03). No Laya or replacement gateway.
 
+**Terminal/startup follow-up:** separate guided delivery terminal source/package,
+metadata choice/state API and explicit reviewed company/LiteLLM startup loaders
+are now implemented. No actual plugin/callback loading or installed-host check was
+performed. See [DELIVERY_STARTUP.md](DELIVERY_STARTUP.md), which supersedes the
+earlier terminal/startup missing-software notes below. Normal tool-coding support,
+continuous pilot-feedback handling and real verification remain incomplete.
+
 The narrow adapter is now real application/source code, exercised with controlled
 provider responses and a loopback fake-provider HTTP server. **It is not installed
 or authorized for real generation.** Company evidence, host compatibility, actual

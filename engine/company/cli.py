@@ -30,6 +30,8 @@ def add_commands(commands):
     service = actions.add_parser("service", help="Company single-host server behind an operator-configured HTTPS proxy; never uses runserver")
     service.add_argument("--store", type=Path, required=True)
     service.add_argument("--deployment", type=Path, required=True, help="Private reviewed deployment configuration JSON")
+    service.add_argument("--integration-manifest", type=Path, help="Private manifest binding explicit reviewed verifier factory source to this company")
+    service.add_argument("--load-reviewed-integration", action="store_true", help="Explicit operator permission to execute that reviewed startup module; not pilot/evidence approval")
     backup = actions.add_parser("backup", help="Operator-requested private paired database/key backup; never overwrite")
     backup.add_argument("--store", type=Path, required=True)
     backup.add_argument("--output", type=Path, required=True)
@@ -93,6 +95,14 @@ def run_command(args):
             executor = MigrationExecutor(connection)
             if executor.migration_plan(executor.loader.graph.leaf_nodes()):
                 raise ValueError("Apply company upgrade with the server stopped before starting the company service.")
+            manifest = getattr(args, "integration_manifest", None)
+            approved = getattr(args, "load_reviewed_integration", False)
+            if bool(manifest) != approved:
+                raise ValueError("A reviewed integration manifest and explicit code-loading approval must be supplied together; default startup stays refusing.")
+            if manifest:
+                from .integration import load_reviewed
+                loaded = load_reviewed(manifest, company, operator_approved=approved)
+                print(json.dumps(loaded))
             from .deployment import serve
             print("Tarkado company service: private Unix socket; HTTPS proxy required. Live routing remains unauthorized.")
             serve(args.store, deployment)

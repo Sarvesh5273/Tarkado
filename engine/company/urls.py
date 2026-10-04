@@ -54,6 +54,8 @@ urlpatterns = [
     path("api/connectors/v1/conditional-settle/", connector_views.conditional_settle),
     path("api/connectors/v1/delivery-bind/", delivery_views.bind),
     path("api/connectors/v1/delivery-preflight/", delivery_views.preflight),
+    path("api/connectors/v1/delivery-options/", delivery_views.options),
+    path("api/connectors/v1/delivery-task/", delivery_views.task),
     path("api/delivery/v1/describe/", delivery_views.describe_view),
     path("api/delivery/v1/begin/", delivery_views.begin_view),
     path("api/delivery/v1/attempt/", delivery_views.attempt_view),

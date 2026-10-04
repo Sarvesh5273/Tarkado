@@ -12,8 +12,11 @@ export default Plugin.define({ id: "tarkado.delivery", async setup(ctx) {
   const coordinator = new DeliveryCoordinator({ company: new CompanyClient(configuration), session: ctx.session,
     directory: ctx.location.directory, gatewayRef: ctx.options.gatewayRef, providerID: ctx.options.providerID,
     gatewayOrigin: ctx.options.gatewayOrigin })
-  await ctx.rpc.register(DeliveryRPC, { connect: () => coordinator.connect(), start: input => coordinator.newTask(input), end: input => coordinator.end(input.sessionID) })
+  const rpc = await ctx.rpc.register(DeliveryRPC, { connect: () => coordinator.connect(), start: input => coordinator.newTask(input),
+    state: input => coordinator.state(input.sessionID), feedback: input => coordinator.feedback(input), end: input => coordinator.end(input.sessionID) })
   const requests = await ctx.session.hook("http.request", event => coordinator.request(event))
   const websockets = await ctx.session.hook("experimental.ws.handshake", event => coordinator.websocket(event))
-  return async () => { await requests.dispose(); await websockets.dispose() }
+  const options = []
+  for (const kind of ["context", "compaction", "title", "generate"]) options.push(await ctx.session.hook(kind, event => coordinator.prepareOptions(event)))
+  return async () => { await rpc.dispose(); await requests.dispose(); await websockets.dispose(); for (const registration of options) await registration.dispose() }
 } })

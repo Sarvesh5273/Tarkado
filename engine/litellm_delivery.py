@@ -35,7 +35,7 @@ class CompanyBackend:
 
     def __init__(self, origin, gateway_token, timeout=10, loopback=False):
         parsed = urlsplit(origin)
-        if (parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/")
+        if (not parsed.hostname or "*" in parsed.netloc or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/")
             or parsed.scheme != "https" and not (loopback and parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "::1"))):
             raise ValidationError("Use an exact company HTTPS origin (or explicitly approved test loopback).")
         self.origin, self.token, self.timeout = origin.rstrip("/"), gateway_token, timeout

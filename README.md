@@ -406,9 +406,15 @@ callbacks and a separate fresh-root OpenCode source are tested with controlled
 provider responses, including a loopback HTTP fake provider. Monitoring, explicit
 non-destructive privacy controls and schema-1 policy handoff reuse the company
 service. Host/billing verifiers remain unconfigured; tools/general coding delivery,
-terminal delivery UI and deployment wiring still need software work. No installed
+continuous pilot feedback and cost corrections still need software work. No installed
 integration, real provider call or production readiness is claimed. See
 [DELIVERY_REFERENCE.md](docs/DELIVERY_REFERENCE.md).
+
+**Delivery terminal/startup source:** guided new-task commands and a separate
+inactive terminal package now join the metadata service to explicit reviewed
+company-verifier and existing-LiteLLM callback startup. No plugin/callback was
+loaded on the installed host. Tool-coding support and real validation remain
+unfinished. See [DELIVERY_STARTUP.md](docs/DELIVERY_STARTUP.md).
 
 Run the tests:
 
@@ -494,6 +500,7 @@ confirmation, usage, metadata limitations, and mock-test coverage.
 | [OPENCODE_CONNECTOR.md](docs/OPENCODE_CONNECTOR.md) | B-04 explicit-task connector/API/plugin source, pairing, capture limits, and unverified-host gates. |
 | [INTEGRATED_LEARNING_SELECTION.md](docs/INTEGRATED_LEARNING_SELECTION.md) | B-05 learner publication/future manual guidance, conditional selection accounting, default-denying admission, and missing live-delivery adapter. |
 | [DELIVERY_REFERENCE.md](docs/DELIVERY_REFERENCE.md) | Narrow reference delivery, reservations/unknown settlement, monitoring/privacy, stable handoff and explicit remaining software/validation. |
+| [DELIVERY_STARTUP.md](docs/DELIVERY_STARTUP.md) | Guided inactive terminal delivery source and explicit reviewed company/LiteLLM startup wiring; no performed installation. |
 | [DECISIONS.md](docs/DECISIONS.md) | Decisions, assumptions, and unresolved choices. |
 | [RESEARCH.md](docs/RESEARCH.md) | Market and research evidence. |
 | [AGENTS.md](AGENTS.md) | Engineering rules for implementation work. |
