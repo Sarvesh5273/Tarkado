@@ -56,6 +56,17 @@ def _review_payload(company, ledger, learner):
         # Binding sidecar observations prevents a report ignoring new gaps/failures.
         # These are diagnostics, not invented engineering-quality or usage labels.
         payload["connector_observations"] = observations
+    from .delivery_evidence import observations as delivery_observations
+    deliveries = delivery_observations(company, learner.plan.source_kind)
+    if deliveries:
+        payload["delivery_observations"] = deliveries
+        report = payload["report"]
+        for category in report["categories"]:
+            if any(item["task_type"] == category["task_type"] and item["negative_signals"] for item in deliveries):
+                category["status"] = "blocked"
+                category["blockers"].append("Retained gateway delivery failures/unknown obligations require investigation; they are not human task-result labels.")
+        report["warnings"].append("Gateway diagnostics retain all same-source developers and attempts, including failures outside the fitting-session subset; API completion is not engineering success.")
+        report["report_sha256"] = _fingerprint({key: value for key, value in report.items() if key != "report_sha256"})
     return payload
 
 
@@ -75,7 +86,7 @@ def prepare_review(request, plan_value):
         return review
 
 
-def verify_review(review, company, allow_future_recommendations=False):
+def verify_review(review, company, allow_future_recommendations=False, delivery_retry_ref=None):
     if review.company_id != company.pk or review.data.get("company_id") != str(company.company_id) or (
         review.data.get("deployment_id") != str(company.deployment_id)
     ):
@@ -108,6 +119,8 @@ def verify_review(review, company, allow_future_recommendations=False):
             if ref not in existing_refs and (item["state"]["gap_count"] or item["state"]["multiple_models"] or
                 any((row["payload"].get("http_status") or 0) >= 400 for row in item["observations"])):
                 raise ValidationError("New connector negative/gap/multi-model observations require another scope review.")
+        from .delivery_evidence import verify_frozen
+        verify_frozen(payload.get("delivery_observations", []), expected.get("delivery_observations", []), retry_binding_ref=delivery_retry_ref)
     learner.verify_source(ledger)
     return ledger, learner, ReadinessReport.from_dict(review.data["report"])
 
@@ -143,8 +156,19 @@ def authorize(request, password, code, review_ref, scope_value, expires_at, reas
         if target == "live":
             from .live_authorization import record_live
             return record_live(member, review, scope, report, expires_at, reason, decision)
-        receipt = review_pilot(report, scope, _roster(company), member.developer_id, decision, now.isoformat(), reason,
+        # The offline receipt checks its own feedback-only report independently.
+        # Company review additionally binds gateway diagnostics; keep those in the
+        # receipt rather than dropping them or weakening the offline verifier.
+        baseline_report = build_readiness(ledger, Policy.from_dict(company.policy), learner)
+        receipt = review_pilot(baseline_report, scope, _roster(company), member.developer_id, decision, now.isoformat(), reason,
                               ledger, Policy.from_dict(company.policy), learner)
+        if report.to_dict() != baseline_report.to_dict():
+            from engine.readiness import PilotReview
+            receipt_data = {**receipt.to_dict(), "report": report.to_dict()}
+            receipt_data["review_sha256"] = _fingerprint({key: value for key, value in receipt_data.items() if key != "review_sha256"})
+            # This still refuses approved blocked categories and inconsistent
+            # routes. Rejection remains possible without discarding diagnostics.
+            receipt = PilotReview.from_dict(receipt_data)
         data = {"company_id": str(company.company_id), "deployment_id": str(company.deployment_id),
                 "review_ref": str(review.reference), "review_sha256": review.data["sha256"], "receipt": receipt.to_dict(),
                 "approver": member_snapshot(member), "mfa_generation": MFAState.objects.get(user=member.user).generation,

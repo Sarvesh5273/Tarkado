@@ -123,7 +123,8 @@ def guard(publication, company):
         # Future recommendations alone do not invalidate the fixed validation view.
         # New feedback and changed observations still invalidate it; no negatives are omitted.
         old = publication.review.data.get("connector_observations", [])
-        current = _review_payload(company, ledger, learner).get("connector_observations", [])
+        reviewed = _review_payload(company, ledger, learner)
+        current = reviewed.get("connector_observations", [])
         by_ref = {item["task_ref"]: item for item in current}
         if any(by_ref.get(item["task_ref"], {}).get("observations") != item["observations"] for item in old):
             raise ValidationError("Bound connector observations changed after publication.")
@@ -131,6 +132,11 @@ def guard(publication, company):
             if item["task_ref"] not in {row["task_ref"] for row in old} and (item["state"]["gap_count"] or item["state"]["multiple_models"]
                 or any((row["payload"].get("http_status") or 0) >= 400 for row in item["observations"])):
                 raise ValidationError("New connector gaps/errors/multiple-model evidence requires another validation review.")
+        from .delivery_evidence import verify_frozen
+        deliveries = reviewed.get("delivery_observations", [])
+        verify_frozen(publication.review.data.get("delivery_observations", []), deliveries)
+        if any(item["negative_signals"] and item["task_type"] in learner.plan.task_types for item in deliveries):
+            raise ValidationError("Retained gateway delivery failures/unknown obligations block this learned suggestion; investigate them without fabricating desired results.")
         return {"status": "current", "reason": "Published validation artifact and current negative/unknown feedback checks match. Confidence remains experimental."}
     except (ValidationError, PermissionDenied) as error:
         return {"status": "blocked", "reason": str(error)}

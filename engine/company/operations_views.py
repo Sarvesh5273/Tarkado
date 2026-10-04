@@ -110,4 +110,10 @@ def revoke_gateway(request, reference):
 @protected()
 @require_http_methods(["GET"])
 def handoff(request, reference):
-    return JsonResponse(policy_handoff.build(request, reference), json_dumps_params={"ensure_ascii": True})
+    try:
+        value = policy_handoff.build(request, reference)
+    except (PrivacyError, ValidationError, KeyError, TypeError, ValueError, AttributeError):
+        # Refuse malformed history without exposing its content or repairing it.
+        return JsonResponse({"error": "Stored policy handoff is invalid or unsupported; preserve history and review its exact bindings.",
+                             "routing_enabled": False, "portable_live_approval": False}, status=400)
+    return JsonResponse(value, json_dumps_params={"ensure_ascii": True})

@@ -208,7 +208,7 @@ def _binding(gateway, reference):
     return binding
 
 
-def _current(gateway, binding, task_token, session_ref):
+def _current(gateway, binding, task_token, session_ref, retry_request_id=None):
     if not isinstance(task_token, str) or gateway.pk != binding.gateway_id or not secrets.compare_digest(connectors.digest(task_token), binding.digest) or session_ref != binding.data["session_ref"]:
         raise PermissionDenied("Wrong task, session, or gateway delivery credential.")
     credential = binding.connector_task.credential
@@ -218,8 +218,10 @@ def _current(gateway, binding, task_token, session_ref):
     row = selected_state["decisions"].get(binding.selection_id)
     if row is None or _fingerprint(row) != binding.data["selection_sha256"] or binding.selection_id not in selected_state["claims"]:
         raise ValidationError("Delivery binding differs from its original selection/claim.")
+    prior = [attempt for attempt in state(binding)["attempts"].values() if attempt["request_id"] == retry_request_id]
+    retry_ref = str(binding.reference) if prior and all(attempt["outcome"] == "retryable_failure" and attempt["cost_usd"] is not None for attempt in prior) else None
     if (selected_state["status"] != "active" or binding.selection_id in selected_state["settlements"] or binding.connector_task.closed_at
-        or live_guard(runtime.authorization, gateway.company, allow_future_recommendations=True)["status"] != "current"):
+        or live_guard(runtime.authorization, gateway.company, allow_future_recommendations=True, delivery_retry_ref=retry_ref)["status"] != "current"):
         raise ValidationError("Delivery is paused, withdrawn, closed, settled, or stale; never switch its model.")
     envelope = envelope_for(gateway.company, row["model"])
     if envelope.to_dict() != binding.data["envelope"]:
@@ -360,7 +362,7 @@ def begin_request(gateway_token, task_token, binding_ref, session_ref, gateway_u
 def admit_attempt(gateway_token, task_token, binding_ref, session_ref, request_id, attempt_id, provider_model, output_limit, stream):
     gateway = authenticate_gateway(gateway_token)
     binding = _binding(gateway, binding_ref)
-    envelope = _current(gateway, binding, task_token, session_ref)
+    envelope = _current(gateway, binding, task_token, session_ref, retry_request_id=request_id)
     request = state(binding)["requests"].get(request_id)
     if request is None or provider_model != envelope.provider_model or (request["output_limit"], request["stream"]) != (output_limit, stream):
         raise ValidationError("Physical provider model/request differs from its exact logical request binding.")

@@ -140,6 +140,19 @@ closed, complete, consistent single-model primary delivery and matching reported
 use; unknowns, failures, mismatches and observation gaps are retained. Gateway
 completion is never automatically written as engineering success.
 
+### Owner-review corrections — 2026-10-04
+
+Company evidence reviews now bind the validated gateway attempt journal alongside
+the connector sidecar. Timeouts, missing usage, failures/retries, wrong models and
+cost/usage-bound overruns block affected category review and future published
+suggestions even when the failed developer/session was not selected for fitting.
+Retained failures survive later billing reconciliation. The count-based learner
+is not given fabricated task outcomes or extra positive examples. Pending/healthy
+delivery alone does not stale a future-task suggestion. Known same-request retries
+keep their original model and require a fresh reservation; unknown costs do not
+get a retry exemption. Both live evidence checks and publication consume the same
+validated diagnostics; old reports/publications are not rewritten.
+
 ## Privacy, retention and monitoring
 
 The existing gateway necessarily processes authorized inference content. Tarkado
@@ -181,6 +194,14 @@ installed-host certification. Stale/inactive scopes and unavailable envelopes
 are disclosed. The full exact policy/learner/scope is included without provider
 secrets or inference content. A hash detects inconsistent copies, not authorship.
 The live company service must still recheck authority at every supported boundary.
+
+The checker also validates the nested learner, scope, positive limits, identifiers,
+model capabilities, aggregate counts and unsupported-envelope diagnostics. Rehashing
+malformed content does not make it valid. This is structural/semantic validation,
+not authentication of detached scope/source claims. Simulation-pilot exports read
+their local receipt format explicitly, remain labelled simulation-only and include
+no live provider envelopes. Corrupt stored exports return a controlled HTTP 400
+refusal; current permissions/MFA still protect the export and no history is reset.
 
 ## Joined controlled walkthrough — runnable now
 
@@ -281,7 +302,8 @@ installation, loading, private access, destructive retention or real provider ca
 Local logical commits are authorized. **No public push or release** until the
 owner selects a licence. All six earlier local commits and private stores remain.
 
-Final regression verification: **705 Python / 26 JavaScript tests pass**,
+Final regression verification after the owner-review fixes: **725 Python /
+26 JavaScript tests pass** (705 retained Python baseline + 20 new regressions),
 `git diff --check` passes, and existing assertions are retained. The Python suite
 also invokes JavaScript tests. Counts demonstrate regression coverage, not
 installed-host compatibility, real provider billing, model quality or readiness.

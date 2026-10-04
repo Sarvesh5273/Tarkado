@@ -251,8 +251,12 @@ def control(request, password, code, reference, action, expected_revision, reaso
         if type(expected_revision) is not int or expected_revision != state["revision"]:
             raise ValidationError("Selection runtime changed; reload before stale control.")
         choice(action, "action", ("pause", "resume", "revoke", "rollback"))
-        if action == "resume" and live_guard(approval, member.company, allow_future_recommendations=True)["status"] != "current":
-            raise ValidationError("Current live scope/readiness is required for resume.")
+        if action == "resume":
+            from .delivery import resume_blocked
+            if resume_blocked(runtime):
+                raise ValidationError("Unknown/failed delivery obligations forbid unchanged resume.")
+            if live_guard(approval, member.company, allow_future_recommendations=True)["status"] != "current":
+                raise ValidationError("Current live scope/readiness is required for resume.")
         _append(runtime, member, action, {"reason": text(reason, "reason")})
         if action in ("revoke", "rollback") and approval.revoked_at is None:
             from .live_authorization import reverse_live
