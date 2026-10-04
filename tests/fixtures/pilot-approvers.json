@@ -1,0 +1,7 @@
+{
+  "approvers": [
+    {"approver_id": "synthetic-senior", "role": "senior", "can_approve_pilots": true},
+    {"approver_id": "synthetic-admin", "role": "admin", "can_approve_pilots": true},
+    {"approver_id": "synthetic-other-senior", "role": "senior", "can_approve_pilots": false}
+  ]
+}

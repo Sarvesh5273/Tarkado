@@ -1,0 +1,7 @@
+{
+  "settlement_id": "synthetic-pilot-settlement-1",
+  "decision_id": "synthetic-pilot-decision-1",
+  "timestamp": "2026-10-04T13:01:00Z",
+  "actual_cost_usd": "0.006",
+  "outcome": "completed"
+}

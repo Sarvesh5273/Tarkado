@@ -1,0 +1,42 @@
+{
+  "policy_version": "synthetic-static-v1",
+  "default_model": "fixture/premium",
+  "models": [
+    {
+      "model_id": "fixture/cheap",
+      "tier": "cheap",
+      "approved": true,
+      "task_types": ["documentation"],
+      "tools": ["read"],
+      "max_context_tokens": 8000
+    },
+    {
+      "model_id": "fixture/standard",
+      "tier": "standard",
+      "approved": true,
+      "task_types": ["documentation", "test_generation"],
+      "tools": ["read", "edit", "test"],
+      "max_context_tokens": 16000
+    },
+    {
+      "model_id": "fixture/premium",
+      "tier": "premium",
+      "approved": true,
+      "task_types": ["*"],
+      "tools": ["read", "edit", "test"],
+      "max_context_tokens": 64000
+    }
+  ],
+  "rules": [
+    {
+      "task_type": "documentation",
+      "model": "fixture/cheap",
+      "evidence_refs": ["synthetic-only:documentation-example"]
+    },
+    {
+      "task_type": "test_generation",
+      "model": "fixture/standard",
+      "evidence_refs": ["synthetic-only:test-generation-example"]
+    }
+  ]
+}

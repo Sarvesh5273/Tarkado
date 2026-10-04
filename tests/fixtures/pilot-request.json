@@ -1,0 +1,18 @@
+{
+  "decision_id": "synthetic-pilot-decision-1",
+  "task": {
+    "task_id": "synthetic-pilot-task-1",
+    "session_id": "synthetic-pilot-session-1",
+    "developer_id": "synthetic-junior",
+    "timestamp": "2026-10-04T13:00:00Z",
+    "task_type": "documentation",
+    "risk_tags": ["low"],
+    "selected_model": "fixture/premium",
+    "required_tools": ["read"],
+    "context_tokens": 2000
+  },
+  "repository_ref": "synthetic-repository",
+  "boundary": "new_task",
+  "reserve_usd": "0.10",
+  "override_model": null
+}

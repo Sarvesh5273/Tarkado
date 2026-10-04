@@ -1,0 +1,23 @@
+{
+  "policy_version": "synthetic-rollout-v1",
+  "default_model": "fixture/premium",
+  "models": [
+    {
+      "model_id": "fixture/candidate",
+      "tier": "standard",
+      "status": "candidate",
+      "task_types": ["documentation", "test_generation"],
+      "tools": ["read", "edit", "test"],
+      "max_context_tokens": 16000
+    },
+    {
+      "model_id": "fixture/premium",
+      "tier": "premium",
+      "status": "approved",
+      "task_types": ["*"],
+      "tools": ["read", "edit", "test"],
+      "max_context_tokens": 64000
+    }
+  ],
+  "rules": []
+}

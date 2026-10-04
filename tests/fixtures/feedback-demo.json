@@ -1,0 +1,53 @@
+{
+  "team": {
+    "company_api_attested": true,
+    "members": [
+      {"developer_id": "synthetic-senior", "role": "senior"},
+      {"developer_id": "synthetic-junior", "role": "junior"}
+    ]
+  },
+  "tasks": [
+    {
+      "task": {"task_id": "docs-success-1", "session_id": "synthetic-session-1", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T10:00:00Z", "task_type": "documentation", "risk_tags": ["low"], "selected_model": "fixture/premium", "required_tools": ["read"], "context_tokens": 2000},
+      "response": {"developer_id": "synthetic-senior", "timestamp": "2026-10-03T10:01:00Z", "response": "accept"},
+      "execution": {"execution_id": "exec-docs-1", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T10:02:00Z", "actual_model": "fixture/cheap"},
+      "result": {"result_id": "result-docs-1", "execution_id": "exec-docs-1", "reviewer_id": "synthetic-senior", "timestamp": "2026-10-03T10:03:00Z", "desired_result": true, "tests_passed": null, "score": "1", "cost_usd": "0.005", "latency_ms": 200, "evidence_ref": "synthetic-confirmation:docs-1", "supersedes": null}
+    },
+    {
+      "task": {"task_id": "docs-success-2", "session_id": "synthetic-session-2", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T11:00:00Z", "task_type": "documentation", "risk_tags": ["low"], "selected_model": "fixture/premium", "required_tools": ["read"], "context_tokens": 2000},
+      "response": {"developer_id": "synthetic-senior", "timestamp": "2026-10-03T11:01:00Z", "response": "accept"},
+      "execution": {"execution_id": "exec-docs-2", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T11:02:00Z", "actual_model": "fixture/cheap"},
+      "result": {"result_id": "result-docs-2", "execution_id": "exec-docs-2", "reviewer_id": "synthetic-senior", "timestamp": "2026-10-03T11:03:00Z", "desired_result": true, "tests_passed": null, "score": "1", "cost_usd": "0.006", "latency_ms": 230, "evidence_ref": "synthetic-confirmation:docs-2", "supersedes": null}
+    },
+    {
+      "task": {"task_id": "accepted-but-not-run", "session_id": "synthetic-session-3", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T12:00:00Z", "task_type": "documentation", "risk_tags": ["low"], "selected_model": "fixture/premium", "required_tools": ["read"], "context_tokens": 2000},
+      "response": {"developer_id": "synthetic-senior", "timestamp": "2026-10-03T12:01:00Z", "response": "accept"},
+      "execution": null,
+      "result": null
+    },
+    {
+      "task": {"task_id": "accepted-used-different-model", "session_id": "synthetic-session-4", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T13:00:00Z", "task_type": "documentation", "risk_tags": ["low"], "selected_model": "fixture/premium", "required_tools": ["read"], "context_tokens": 2000},
+      "response": {"developer_id": "synthetic-senior", "timestamp": "2026-10-03T13:01:00Z", "response": "accept"},
+      "execution": {"execution_id": "exec-different", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T13:02:00Z", "actual_model": "fixture/premium"},
+      "result": {"result_id": "result-different", "execution_id": "exec-different", "reviewer_id": "synthetic-senior", "timestamp": "2026-10-03T13:03:00Z", "desired_result": true, "tests_passed": true, "score": "1", "cost_usd": "0.06", "latency_ms": 900, "evidence_ref": "synthetic-confirmation:different", "supersedes": null}
+    },
+    {
+      "task": {"task_id": "senior-tests-success", "session_id": "synthetic-session-5", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T14:00:00Z", "task_type": "test_generation", "risk_tags": ["low"], "selected_model": "fixture/premium", "required_tools": ["read", "edit", "test"], "context_tokens": 4000},
+      "response": {"developer_id": "synthetic-senior", "timestamp": "2026-10-03T14:01:00Z", "response": "accept"},
+      "execution": {"execution_id": "exec-senior-tests", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T14:02:00Z", "actual_model": "fixture/standard"},
+      "result": {"result_id": "result-senior-tests", "execution_id": "exec-senior-tests", "reviewer_id": "synthetic-senior", "timestamp": "2026-10-03T14:03:00Z", "desired_result": true, "tests_passed": true, "score": "1", "cost_usd": "0.03", "latency_ms": 500, "evidence_ref": "synthetic-confirmation:senior-tests", "supersedes": null}
+    },
+    {
+      "task": {"task_id": "junior-tests-failure", "session_id": "synthetic-session-6", "developer_id": "synthetic-junior", "timestamp": "2026-10-03T15:00:00Z", "task_type": "test_generation", "risk_tags": ["low"], "selected_model": "fixture/premium", "required_tools": ["read", "edit", "test"], "context_tokens": 4000},
+      "response": {"developer_id": "synthetic-junior", "timestamp": "2026-10-03T15:01:00Z", "response": "accept"},
+      "execution": {"execution_id": "exec-junior-tests", "developer_id": "synthetic-junior", "timestamp": "2026-10-03T15:02:00Z", "actual_model": "fixture/standard"},
+      "result": {"result_id": "result-junior-tests", "execution_id": "exec-junior-tests", "reviewer_id": "synthetic-junior", "timestamp": "2026-10-03T15:03:00Z", "desired_result": false, "tests_passed": false, "score": "0.7", "cost_usd": "0.03", "latency_ms": 500, "evidence_ref": "synthetic-confirmation:junior-failure", "supersedes": null}
+    },
+    {
+      "task": {"task_id": "rejected-suggestion", "session_id": "synthetic-session-7", "developer_id": "synthetic-senior", "timestamp": "2026-10-03T16:00:00Z", "task_type": "test_generation", "risk_tags": ["low"], "selected_model": "fixture/premium", "required_tools": ["read", "edit", "test"], "context_tokens": 4000},
+      "response": {"developer_id": "synthetic-senior", "timestamp": "2026-10-03T16:01:00Z", "response": "reject"},
+      "execution": null,
+      "result": null
+    }
+  ]
+}

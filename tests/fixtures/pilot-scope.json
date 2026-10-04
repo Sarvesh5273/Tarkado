@@ -1,0 +1,8 @@
+{
+  "pilot_id": "synthetic-documentation-pilot-v1",
+  "repository_ref": "synthetic-repository",
+  "task_types": ["documentation"],
+  "developer_ids": ["synthetic-senior", "synthetic-junior"],
+  "max_tasks": 5,
+  "max_cost_usd": "1.00"
+}

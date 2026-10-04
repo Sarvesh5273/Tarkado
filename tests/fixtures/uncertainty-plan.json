@@ -1,0 +1,13 @@
+{
+  "source": "hand-written synthetic independence-assumption demonstration",
+  "source_kind": "synthetic",
+  "dataset_split": "validation",
+  "task_types": ["documentation", "test_generation"],
+  "min_tasks": 3,
+  "min_samples_per_task": 2,
+  "uncertainty": {
+    "confidence_level": "0.95",
+    "independent_tasks_attested": true,
+    "fixed_sampling_attested": true
+  }
+}

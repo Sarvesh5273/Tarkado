@@ -1,0 +1,11 @@
+{
+  "task_id": "future-test-generation",
+  "session_id": "synthetic-future-session-tests",
+  "developer_id": "synthetic-junior",
+  "timestamp": "2026-10-04T11:00:00Z",
+  "task_type": "test_generation",
+  "risk_tags": ["low"],
+  "selected_model": "fixture/premium",
+  "required_tools": ["read", "edit", "test"],
+  "context_tokens": 4000
+}

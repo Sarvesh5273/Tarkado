@@ -1,0 +1,11 @@
+{
+  "task_id": "future-documentation",
+  "session_id": "synthetic-future-session-docs",
+  "developer_id": "synthetic-junior",
+  "timestamp": "2026-10-04T10:00:00Z",
+  "task_type": "documentation",
+  "risk_tags": ["low"],
+  "selected_model": "fixture/premium",
+  "required_tools": ["read"],
+  "context_tokens": 2000
+}

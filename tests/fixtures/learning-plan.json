@@ -1,0 +1,18 @@
+{
+  "learner_version": "synthetic-count-baseline-v1",
+  "source_kind": "synthetic",
+  "dataset_split": "validation",
+  "cutoff": "2026-10-03T17:00:00Z",
+  "session_ids": [
+    "synthetic-session-1",
+    "synthetic-session-2",
+    "synthetic-session-3",
+    "synthetic-session-4",
+    "synthetic-session-5",
+    "synthetic-session-6",
+    "synthetic-session-7"
+  ],
+  "task_types": ["documentation", "test_generation"],
+  "min_senior_successes": 2,
+  "min_senior_sessions": 2
+}

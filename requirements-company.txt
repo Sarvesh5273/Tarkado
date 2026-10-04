@@ -1,0 +1,7 @@
+# Approved company login framework and the dependencies verified with it.
+# The offline engine remains dependency-free.
+Django==5.2.17
+asgiref==3.12.1
+sqlparse==0.6.0
+django-otp==1.7.3
+waitress==3.0.2
