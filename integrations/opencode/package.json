@@ -1,0 +1,12 @@
+{
+  "name": "tarkado-opencode-connector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./tui": "./src/tui.tsx",
+    "./rpc": "./src/rpc.mjs"
+  },
+  "scripts": {"test": "node --test test/*.test.mjs"}
+}
