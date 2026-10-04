@@ -92,6 +92,7 @@ class LocalFunctionTool:
     name: str
     capability: str
     function_sha256: str
+    status_metadata_key: str | None = None
 
     def to_dict(self):
         if not isinstance(self.name, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", self.name):
@@ -105,12 +106,17 @@ class LocalFunctionTool:
             raise ValidationError("Built-in tool names cannot be relabelled to broaden a task capability.")
         if not isinstance(self.function_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", self.function_sha256):
             raise ValidationError("Independently reviewed exact function definition fingerprint is required.")
-        return {"name": self.name, "capability": self.capability, "function_sha256": self.function_sha256}
+        result = {"name": self.name, "capability": self.capability, "function_sha256": self.function_sha256}
+        if self.status_metadata_key is not None:
+            if self.status_metadata_key != "tarkado_status_v1":
+                raise ValidationError("Only the reviewed v1 negative-status metadata contract is supported.")
+            result["status_metadata_key"] = self.status_metadata_key
+        return result
 
     @classmethod
     def from_dict(cls, value):
         fields = tuple(cls.__dataclass_fields__)
-        tool = cls(**object_fields(value, fields, fields))
+        tool = cls(**object_fields(value, fields, fields[:3]))
         tool.to_dict()
         return tool
 

@@ -305,7 +305,7 @@ def select(member, reference, value, connector_link=None):
     scope = approval.data["scope"]
     route = next((row for row in approval.data["routes"] if row["task_type"] == task.task_type), None)
     model = data["override_model"] or (route["model"] if route else policy.default_model)
-    guard = live_guard(approval, member.company, allow_future_recommendations=True)
+    guard = live_guard(approval, member.company, allow_future_recommendations=True, tool_task_types=(task.task_type,))
     money = accounting(runtime, state)
     reserve = number(data["reserve_usd"], "reserve_usd") if data["reserve_usd"] is not None else None
     if guard["status"] != "current": issue = guard["reason"]
@@ -325,7 +325,7 @@ def select(member, reference, value, connector_link=None):
     proof = verify_admission(admission)
     approval.refresh_from_db()
     fresh_member = current_member(member.user)
-    if member_snapshot(fresh_member) != member_snapshot(member) or live_guard(approval, fresh_member.company, allow_future_recommendations=True)["status"] != "current":
+    if member_snapshot(fresh_member) != member_snapshot(member) or live_guard(approval, fresh_member.company, allow_future_recommendations=True, tool_task_types=(task.task_type,))["status"] != "current":
         raise ValidationError("Scope changed during admission verification; no reservation was created.")
     identity = _fingerprint({"developer_id": member.developer_id, "session_id": task.session_id, "task_id": task.task_id})
     if any(row["identity"] == identity or row["assessment"]["boundary_ref"] == proof.boundary_ref for row in state["decisions"].values()):
@@ -358,7 +358,7 @@ def claim(member, reference, selection_id):
         raise PermissionDenied("Selection claim is not owned by this developer.")
     if selection_id in state["claims"]:
         return {"historical_replay": True, "new_claim": False, "execution_authorized": False}
-    if state["status"] != "active" or live_guard(approval, member.company, allow_future_recommendations=True)["status"] != "current" or selection_id in state["settlements"]:
+    if state["status"] != "active" or live_guard(approval, member.company, allow_future_recommendations=True, tool_task_types=(row["request"]["task"]["task_type"],))["status"] != "current" or selection_id in state["settlements"]:
         raise ValidationError("Selection runtime/scope is inactive/stale/settled; delivery is refused.")
     if row["connector_task_ref"]:
         link = ConnectorTask.objects.filter(reference=row["connector_task_ref"], task__owner=member.user).first()
@@ -367,7 +367,7 @@ def claim(member, reference, selection_id):
     proof = verify_admission(AdmissionRequest(**row["admission_request"]), expected=row["assessment"])
     approval.refresh_from_db()
     fresh_member = current_member(member.user)
-    if member_snapshot(fresh_member) != member_snapshot(member) or live_guard(approval, fresh_member.company, allow_future_recommendations=True)["status"] != "current":
+    if member_snapshot(fresh_member) != member_snapshot(member) or live_guard(approval, fresh_member.company, allow_future_recommendations=True, tool_task_types=(row["request"]["task"]["task_type"],))["status"] != "current":
         raise ValidationError("Scope changed during one-use claim verification; no delivery claim was created.")
     _append(runtime, member, "claim", {"selection_id": selection_id, "assessment_sha256": _fingerprint(proof.to_dict())})
     _audit(member, "selection_claim", scope_ref=str(reference), selection_ref=selection_id, model=row["model"], execution_sent=False)

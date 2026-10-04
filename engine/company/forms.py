@@ -9,7 +9,7 @@ from engine.privacy import PrivacyError, ensure_safe, redact_text
 from engine.schemas import ValidationError
 
 from .models import Membership
-from .services import COLLECTION_FIELDS, validate_configuration, validate_permissions, validate_username
+from .services import SUPPORTED_COLLECTION_FIELDS, validate_configuration, validate_permissions, validate_username
 
 
 class StrictForm(forms.Form):
@@ -134,7 +134,7 @@ class ConfigurationForm(AdministratorForm):
     name = forms.CharField(max_length=128, label="Company name")
     policy_json = forms.CharField(widget=forms.Textarea(attrs={"rows": 16, "cols": 70}), label="Existing engine policy JSON")
     repositories = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}), help_text="One explicit approved repository reference per line.")
-    collection_fields = forms.MultipleChoiceField(choices=[(field, field) for field in COLLECTION_FIELDS],
+    collection_fields = forms.MultipleChoiceField(choices=[(field, field) for field in SUPPORTED_COLLECTION_FIELDS],
                                                    widget=forms.CheckboxSelectMultiple)
     company_api_attested = forms.BooleanField(label="Confirm company-managed API/gateway use, not consumer subscriptions")
 

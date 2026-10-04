@@ -15,6 +15,12 @@ contract and safe existing test-tool requirements are in
 [FUNCTION_CODING.md](FUNCTION_CODING.md). No unrestricted shell, remote/paid tools,
 automatic tool-outcome capture or actual host validation is added.
 
+**Tool-status follow-up:** [TOOL_STATUS_CAPTURE.md](TOOL_STATUS_CAPTURE.md) adds
+separately approved metadata fields and opt-in `toolFailureCapture` for the inactive
+delivery source. Generic V2 statuses and reviewed structured negatives are captured;
+native missing permission/interruption events stay unknown. No actual plugin was
+loaded or installed-host validation performed by this follow-up.
+
 ## What the new terminal source does
 
 The separate private package at `integrations/opencode/delivery/` exports a server

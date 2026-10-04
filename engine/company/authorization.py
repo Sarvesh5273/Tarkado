@@ -67,6 +67,17 @@ def _review_payload(company, ledger, learner):
                 category["blockers"].append("Retained gateway delivery failures/unknown obligations require investigation; they are not human task-result labels.")
         report["warnings"].append("Gateway diagnostics retain all same-source developers and attempts, including failures outside the fitting-session subset; API completion is not engineering success.")
         report["report_sha256"] = _fingerprint({key: value for key, value in report.items() if key != "report_sha256"})
+    from .tool_observations import observations as tool_observations
+    tools = tool_observations(company, learner.plan.source_kind)
+    if tools:
+        payload["tool_observations"] = tools
+        report = payload["report"]
+        for category in report["categories"]:
+            if any(item["task_type"] == category["task_type"] and (item["state"]["negative_signals"] or item["state"]["continuation_blocked"]) for item in tools):
+                category["status"] = "blocked"
+                category["blockers"].append("Retained intermediate tool failures or missing/refused/interrupted invocations need review; no final task outcome is inferred.")
+        report["warnings"].append("Tool completion is not a passing test; structured intermediate test failures are not final engineering outcomes.")
+        report["report_sha256"] = _fingerprint({key: value for key, value in report.items() if key != "report_sha256"})
     return payload
 
 
@@ -86,7 +97,7 @@ def prepare_review(request, plan_value):
         return review
 
 
-def verify_review(review, company, allow_future_recommendations=False, delivery_retry_ref=None):
+def verify_review(review, company, allow_future_recommendations=False, delivery_retry_ref=None, tool_binding_ref=None, tool_task_types=None):
     if review.company_id != company.pk or review.data.get("company_id") != str(company.company_id) or (
         review.data.get("deployment_id") != str(company.deployment_id)
     ):
@@ -122,6 +133,10 @@ def verify_review(review, company, allow_future_recommendations=False, delivery_
                 raise ValidationError("New connector negative/gap/multi-model observations require another scope review.")
         from .delivery_evidence import verify_frozen
         verify_frozen(payload.get("delivery_observations", []), expected.get("delivery_observations", []), retry_binding_ref=delivery_retry_ref)
+    if allow_future_recommendations:
+        from .tool_observations import verify_execution
+        verify_execution(payload.get("tool_observations", []), expected.get("tool_observations", []), binding_ref=tool_binding_ref,
+                         task_types=learner.plan.task_types if tool_task_types is None else tool_task_types)
     if allow_future_recommendations:
         from .pilot_feedback import verify_for_execution
         verify_for_execution(review, ledger, learner)

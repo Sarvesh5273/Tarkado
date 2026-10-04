@@ -267,3 +267,18 @@ class DeliveryBinding(models.Model):
 class OperationalControl(models.Model):
     company = models.OneToOneField(Company, on_delete=models.PROTECT)
     journal = models.JSONField(default=list)
+
+
+class ToolObservation(models.Model):
+    binding = models.ForeignKey(DeliveryBinding, on_delete=models.PROTECT, related_name="tool_observations")
+    event_id = models.UUIDField()
+    sequence = models.PositiveIntegerField()
+    received_at = models.DateTimeField()
+    actor_snapshot = models.JSONField()
+    payload = models.JSONField()
+    missing_before = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("sequence",)
+        constraints = [models.UniqueConstraint(fields=("binding", "event_id"), name="tool_observation_event_identity"),
+                       models.UniqueConstraint(fields=("binding", "sequence"), name="tool_observation_sequence")]

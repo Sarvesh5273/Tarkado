@@ -259,3 +259,22 @@ subagents, unknown cost and non-text billing paths. Existing OpenCode owns local
 permissions/tool execution. Tests use an isolated controlled tool/provider fixture;
 no actual host/tool safety, billing, quality, installation or provider call is
 authorized or claimed. Acceptance remains preference, not outcome/pilot approval.
+
+## Intermediate local-tool observation handling — owner approved 2026-10-04
+
+After checking official V2/release-pinned hook types, the owner selected bound-task
+repair: retain intermediate execution errors and explicit structured test failures,
+block new automatic affected-category tasks pending review, and permit repair only
+for the exact already-bound task under unchanged scope/model and fresh budget
+reservation. Refusal, interruption, unknown/missing results and gaps block further
+paid continuation. All existing provider/negative/authority/model/budget vetoes stay.
+No tool status becomes a final human engineering result, learner success or pilot
+approval. No old artifacts, thresholds, hashes or scope are rewritten or expanded.
+
+Capture is opt-in with new explicitly approved metadata fields and owner pairing.
+V2 exposes generic before/after invocation IDs and completed/error status. Structured
+test/refusal/interruption labels need an independently reviewed tool metadata
+contract; native paths lacking an after event remain unknown. Do not scan output
+or error text, infer provider-attempt linkage, grant permission or run tools.
+No installation/private access/provider call/deployment/public push is approved
+by this implementation decision. See `docs/TOOL_STATUS_CAPTURE.md`.

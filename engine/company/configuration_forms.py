@@ -7,7 +7,7 @@ from engine.privacy import PrivacyError
 from engine.schemas import Policy, ValidationError
 
 from .forms import AdministratorForm, SelectorMultipleField
-from .services import COLLECTION_FIELDS, validate_configuration
+from .services import SUPPORTED_COLLECTION_FIELDS, validate_configuration
 
 
 class BrowserConfigurationForm(AdministratorForm):
@@ -16,7 +16,7 @@ class BrowserConfigurationForm(AdministratorForm):
     policy_version = forms.CharField(max_length=128, help_text="Use a new version whenever model capabilities, approval, fallback, or rules change. Old task snapshots remain immutable.")
     default_model = forms.ChoiceField(choices=(), label="Approved premium fallback")
     repositories = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), help_text="One explicit approved repository reference per line; no wildcards.")
-    collection_fields = SelectorMultipleField(choices=[(item, item.replace("_", " ")) for item in COLLECTION_FIELDS], widget=forms.CheckboxSelectMultiple)
+    collection_fields = SelectorMultipleField(choices=[(item, item.replace("_", " ")) for item in SUPPORTED_COLLECTION_FIELDS], widget=forms.CheckboxSelectMultiple)
     company_api_attested = forms.BooleanField(label="Confirm company-managed API/gateway use, never consumer subscriptions")
 
     def __init__(self, *args, company, **kwargs):

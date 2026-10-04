@@ -65,9 +65,9 @@ def run_command(args):
             configure(args.store, create=True)
             from django.contrib.auth import get_user_model
             from django.contrib.auth.password_validation import validate_password
-            from .services import COLLECTION_FIELDS, bootstrap_company, validate_configuration, validate_username
+            from .services import DEFAULT_COLLECTION_FIELDS, bootstrap_company, validate_configuration, validate_username
             validate_username(args.username)
-            validate_configuration(args.name, policy.to_dict(), args.repositories, list(COLLECTION_FIELDS), args.company_api)
+            validate_configuration(args.name, policy.to_dict(), args.repositories, list(DEFAULT_COLLECTION_FIELDS), args.company_api)
             validate_password(password, user=get_user_model()(username=args.username))
             initialize_store(args.store)
             call_command("migrate", interactive=False, verbosity=0)

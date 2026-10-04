@@ -137,6 +137,8 @@ def guard(publication, company):
         verify_frozen(publication.review.data.get("delivery_observations", []), deliveries)
         if any(item["negative_signals"] and item["task_type"] in learner.plan.task_types for item in deliveries):
             raise ValidationError("Retained gateway delivery failures/unknown obligations block this learned suggestion; investigate them without fabricating desired results.")
+        from .tool_observations import verify_execution
+        verify_execution(publication.review.data.get("tool_observations", []), reviewed.get("tool_observations", []), task_types=learner.plan.task_types)
         return {"status": "current", "reason": "Published validation artifact and current negative/unknown feedback checks match. Confidence remains experimental."}
     except (ValidationError, PermissionDenied) as error:
         return {"status": "blocked", "reason": str(error)}

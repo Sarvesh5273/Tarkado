@@ -44,7 +44,7 @@ export class CompanyClient {
     this.transport = transport
   }
   async call(method, value) {
-    if (!["status", "start", "task", "observation", "feedback", "conditional-select", "conditional-claim", "conditional-settle", "delivery-preflight", "delivery-bind", "delivery-options", "delivery-task"].includes(method)) throw new Error("Unsupported connector method.")
+    if (!["status", "start", "task", "observation", "feedback", "conditional-select", "conditional-claim", "conditional-settle", "delivery-preflight", "delivery-bind", "delivery-options", "delivery-task", "tool-status"].includes(method)) throw new Error("Unsupported connector method.")
     const response = await this.transport(`${this.configuration.origin}/api/connectors/v1/${method}/`, {
       method: "POST", redirect: "error", credentials: "omit", signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.configuration.credential}` },

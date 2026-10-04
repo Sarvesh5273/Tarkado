@@ -296,6 +296,12 @@ def check_feedback_task(task, kind, value=None):
     binding = DeliveryBinding.objects.filter(connector_task=link).first()
     if binding:
         captured = delivery_state(binding)
+        if kind == "response" and not state["response"] and binding.tool_observations.exclude(payload__tool_phase__in=("open", "gap")).exists():
+            raise ValidationError("A new response must precede tool activity; unknown acceptance stays unknown.")
+        if kind == "result" and isinstance(value, dict) and value.get("desired_result") is True:
+            from .tool_observations import state as tool_state
+            if tool_state(binding)["continuation_blocked"]:
+                raise ValidationError("Unknown/refused/interrupted/gapped tool coverage cannot establish adopted success. Preserve negative/unknown human outcomes.")
         if kind == "response" and not state["response"] and captured["attempts"]:
             raise ValidationError("A new response must precede paid delivery attempts; unanswered stays unknown.")
         if kind == "result" and isinstance(value, dict) and value.get("desired_result") is True:

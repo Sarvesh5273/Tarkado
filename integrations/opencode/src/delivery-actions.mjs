@@ -17,6 +17,8 @@ export function deliveryLines(state) {
     `Remaining task USD: ${delivery?.remaining_task_usd ?? "Unknown"}`,
     `One-task response: ${task.response ?? "Unknown"}; reported actual model: ${task.reported_actual_model ?? "Unknown"}`,
     `Reported desired result: ${task.current_result?.desired_result ?? "Unknown"}`,
+    ...(delivery?.tool_capture ? [`Tool status signals: ${delivery.tool_capture.negative_signals.join(", ") || "none observed"}; pending invocations ${delivery.tool_capture.pending_invocations}; gaps ${delivery.tool_capture.gap_count}`,
+      "Tool completion does not prove tests passed. Intermediate test failures are not final task outcomes."] : []),
     "Gateway accounting is not verified billing or engineering success. Human acceptance is not pilot approval.",
     ...(state.problem ? [state.problem] : []),
   ]

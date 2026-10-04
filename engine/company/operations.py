@@ -83,6 +83,9 @@ def delivery_summary(binding):
     if envelope.get("schema_version") == 2:
         result["local_tools"] = envelope["local_tools"]
         result["local_execution_evidence_ref"] = envelope["local_execution_evidence_ref"]
+    from .tool_observations import state as tool_state
+    if binding.tool_observations.exists():
+        result["tool_capture"] = tool_state(binding)
     return result
 
 
@@ -118,6 +121,9 @@ def monitor(request):
             if summary["unknown_attempts"]: signals.append("unknown_provider_obligation")
             if any(attempt["outcome"] in ("failed", "retryable_failure") for attempt in summary["attempts"]): signals.append("provider_failure")
             if Decimal(summary["remaining_task_usd"]) < 0: signals.append("provider_budget_overrun")
+            if "tool_capture" in summary:
+                signals.extend("tool_" + status for status in summary["tool_capture"]["negative_signals"])
+                if summary["tool_capture"]["pending_invocations"]: signals.append("tool_missing_result")
         for signal in signals:
             alerts.append({"alert_ref": _fingerprint({"task_ref": reference, "signal": signal}), "task_ref": reference,
                            "developer": task.owner.username, "historical_role": row["developer_role"], "signal": signal})

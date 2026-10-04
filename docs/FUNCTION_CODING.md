@@ -8,6 +8,13 @@ This is implemented **conditional software support** for a constrained subset of
 tool-using coding requests. It is not installed-host/provider validation, a live
 pilot authorization or a claim of general unrestricted coding support.
 
+**Capture follow-up:** the inactive bounded-tool source now has opt-in metadata-only
+native invocation/error/completed capture and optional reviewed structured negative
+statuses. Intermediate failures allow exact-bound repair under owner-approved
+controls; missing/refused/interrupted/gapped results block continuation. See
+[TOOL_STATUS_CAPTURE.md](TOOL_STATUS_CAPTURE.md), which supersedes the earlier
+missing-capture notes below without claiming universal native status support.
+
 ## Supported extension
 
 The original text-only envelope and serialization remain unchanged and still

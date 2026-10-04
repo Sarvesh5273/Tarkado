@@ -32,6 +32,11 @@ COLLECTION_FIELDS += CONNECTOR_FIELDS
 # These supported measurements remain unapproved in existing stores/pairings.
 DELIVERY_FIELDS = ("input_tokens", "output_tokens", "cached_input_tokens", "reasoning_tokens")
 COLLECTION_FIELDS += DELIVERY_FIELDS
+DEFAULT_COLLECTION_FIELDS = COLLECTION_FIELDS
+# New capture is unapproved even in a freshly bootstrapped installation until
+# the administrator explicitly changes its collection list and the owner pairs.
+TOOL_CAPTURE_FIELDS = ("tool_invocation_ref", "tool_contract_ref", "tool_phase", "tool_status", "tool_observed_at", "tool_attempt_ref", "tool_status_source")
+SUPPORTED_COLLECTION_FIELDS = COLLECTION_FIELDS + TOOL_CAPTURE_FIELDS
 LOGIN_FAILURE_LIMIT = 8
 LOGIN_FAILURE_WINDOW = timedelta(minutes=15)
 
@@ -64,12 +69,12 @@ def validate_configuration(name, policy, repositories, fields, attested):
     if not repositories or any(any(mark in item for mark in ("*", "?", "[", "]")) for item in repositories):
         raise ValidationError("Collection repositories must be explicit nonempty references, without patterns.")
     fields = strings(fields, "collection_fields")
-    if set(fields) - set(COLLECTION_FIELDS) or not set(COLLECTION_REQUIRED).issubset(fields):
+    if set(fields) - set(SUPPORTED_COLLECTION_FIELDS) or not set(COLLECTION_REQUIRED).issubset(fields):
         raise ValidationError("Collection must use supported metadata fields and retain required task/model identifiers.")
     if not boolean(attested, "company_api_attested"):
         raise ValidationError("Company-managed API/gateway attestation is required; no consumer subscriptions.")
     return {"name": name, "policy": policy, "repository_refs": list(repositories),
-            "collection_fields": [field for field in COLLECTION_FIELDS if field in fields],
+            "collection_fields": [field for field in SUPPORTED_COLLECTION_FIELDS if field in fields],
             "company_api_attested": True, "retention_policy": "manual"}
 
 
@@ -163,7 +168,7 @@ def _check_revision(company, expected_revision):
 def bootstrap_company(username, password, name, policy, repositories, pilot_approver=False):
     username = validate_username(username)
     boolean(pilot_approver, "pilot_approver")
-    config = validate_configuration(name, policy, repositories, list(COLLECTION_FIELDS), True)
+    config = validate_configuration(name, policy, repositories, list(DEFAULT_COLLECTION_FIELDS), True)
     if Company.objects.exists() or get_user_model().objects.exists() or Membership.objects.exists():
         raise ValidationError("This installation already has account/company state; bootstrap cannot replace it.")
     user = get_user_model()(username=username)

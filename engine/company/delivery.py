@@ -91,7 +91,7 @@ class NarrowDeliveryAdmissionVerifier(AdmissionVerifier):
             raise ValidationError("Task owner/repository capability differs from this delivery descriptor.")
         from .models import PilotAuthorization
         approval = PilotAuthorization.objects.filter(company=company, data__sha256=request.scope_record_sha256).first()
-        if approval is None or live_guard(approval, company, allow_future_recommendations=True)["status"] != "current":
+        if approval is None or live_guard(approval, company, allow_future_recommendations=True, tool_task_types=(request.selection_request["task"]["task_type"],))["status"] != "current":
             raise ValidationError("No current separate live approval matches this delivery descriptor.")
         # Stable proof fields survive claim retries/restarts; every verification
         # rechecks current credentials, host envelope, and separate live authority.
@@ -179,7 +179,7 @@ def bind(credential, member, link, scope_ref, selection_id, gateway_ref):
         raise ValidationError("Selection already bound; retries cannot mint another delivery credential.")
     if state["status"] != "active" or selection_id in state["settlements"] or link.closed_at or link.sequence != 0:
         raise ValidationError("Delivery binding must precede activity/close on a fresh task.")
-    if live_guard(runtime.authorization, member.company, allow_future_recommendations=True)["status"] != "current":
+    if live_guard(runtime.authorization, member.company, allow_future_recommendations=True, tool_task_types=(row["request"]["task"]["task_type"],))["status"] != "current":
         raise ValidationError("Current separate live scope/readiness is required for delivery binding.")
     gateway = GatewayCredential.objects.filter(reference=connectors.uuid_value(gateway_ref), company=member.company).first()
     if gateway is None or gateway.revoked_at or timezone.now() >= gateway.expires_at or gateway.scope["repository_ref"] != link.task.repository_ref:
@@ -227,7 +227,7 @@ def _current(gateway, binding, task_token, session_ref, retry_request_id=None):
     prior = [attempt for attempt in state(binding)["attempts"].values() if attempt["request_id"] == retry_request_id]
     retry_ref = str(binding.reference) if prior and all(attempt["outcome"] == "retryable_failure" and attempt["cost_usd"] is not None for attempt in prior) else None
     if (selected_state["status"] != "active" or binding.selection_id in selected_state["settlements"] or binding.connector_task.closed_at
-        or live_guard(runtime.authorization, gateway.company, allow_future_recommendations=True, delivery_retry_ref=retry_ref)["status"] != "current"):
+        or live_guard(runtime.authorization, gateway.company, allow_future_recommendations=True, delivery_retry_ref=retry_ref, tool_binding_ref=str(binding.reference), tool_task_types=(row["request"]["task"]["task_type"],))["status"] != "current"):
         raise ValidationError("Delivery is paused, withdrawn, closed, settled, or stale; never switch its model.")
     envelope = bind_tools(envelope_for(gateway.company, row["model"]), row["request"]["task"]["required_tools"])
     if envelope.to_dict() != binding.data["envelope"]:

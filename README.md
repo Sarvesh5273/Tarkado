@@ -422,6 +422,13 @@ model continuations. This remains conditional on an independently reviewed exist
 client tool boundary; unrestricted shell/hosted tools and real host/provider
 validation are not supplied. See [FUNCTION_CODING.md](docs/FUNCTION_CODING.md).
 
+**Opt-in tool-status capture:** inactive V2 source now links generic tool statuses,
+reviewed structured intermediate negatives and missing-event gaps to permitted
+task metadata. Intermediate failures may repair only the exact bound task; no
+completion is labelled a passing test or final engineering result. Native finer
+statuses without structured metadata stay unknown. See
+[TOOL_STATUS_CAPTURE.md](docs/TOOL_STATUS_CAPTURE.md).
+
 Run the tests:
 
 ```sh
@@ -508,6 +515,7 @@ confirmation, usage, metadata limitations, and mock-test coverage.
 | [DELIVERY_REFERENCE.md](docs/DELIVERY_REFERENCE.md) | Narrow reference delivery, reservations/unknown settlement, monitoring/privacy, stable handoff and explicit remaining software/validation. |
 | [DELIVERY_STARTUP.md](docs/DELIVERY_STARTUP.md) | Guided inactive terminal delivery source and explicit reviewed company/LiteLLM startup wiring; no performed installation. |
 | [FUNCTION_CODING.md](docs/FUNCTION_CODING.md) | Bounded local-function tool contracts and shared continuation budgets; constrained scope and separate host/tool validation. |
+| [TOOL_STATUS_CAPTURE.md](docs/TOOL_STATUS_CAPTURE.md) | Opt-in metadata-only tool signals, immutable invocation linkage, gaps and approved exact-bound repair handling. |
 | [DECISIONS.md](docs/DECISIONS.md) | Decisions, assumptions, and unresolved choices. |
 | [RESEARCH.md](docs/RESEARCH.md) | Market and research evidence. |
 | [AGENTS.md](AGENTS.md) | Engineering rules for implementation work. |

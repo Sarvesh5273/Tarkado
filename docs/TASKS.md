@@ -85,6 +85,64 @@ OpenCode tool. Actual host/tool/pricing/invoice/quality and deployment validatio
 remain separately deferred. See [FUNCTION_CODING.md](FUNCTION_CODING.md). No installs,
 plugin loading, private-session/store access, real provider calls or push occurred.
 
+### Metadata-only local-tool capture — 2026-10-04
+
+Recovered **774 Python / 38 JavaScript** passing baseline and preserved commits,
+uncommitted work and private stores. Checked official V2 docs and pinned `v2.0.21`
+plugin/core/schema source: before/after expose session/message/call/tool identity,
+and after exposes `completed`/`error` with optional arbitrary structured metadata.
+Native permission declines/interruption can miss the after hook; no guessed labels.
+
+**Owner approved handling:** intermediate tool errors/explicit test failures retain
+review signals and block new affected-category automatic tasks, but the exact
+already-bound task may repair under unchanged model/scope/budget. Permission
+refusal, interruption, unknown/missing results and gaps block paid continuation.
+All existing authority, model, budget and provider/negative vetoes remain.
+
+- [x] Implement opt-in, explicitly approved metadata fields and append-only exact
+  invocation/status records, including late events and missing-event gaps.
+- [x] Wire inactive V2 hooks with bounded metadata-only delivery and reviewed
+  optional structured negative-status projection; no output/argument scanning.
+- [x] Join monitoring/category/publication/current-bound repair checks without
+  fabricating final human outcomes or rewriting reviewed artifacts.
+- [x] Add privacy/linkage/status/gap/retry/admission regressions and operating docs.
+- [ ] Make a separate logical local commit; no installs, private access or push.
+
+Implemented additive tool-status records, native generic before/after projection,
+optional reviewed structured negatives and an explicitly approved collection list
+that is excluded from bootstrap defaults. Bounded queues retain exact retry IDs,
+sequence holes and unknown after-results. Capture initialization records allow
+restart detection through company metadata only; no private session reads/replay.
+Monitoring/review bind all permitted retained signals. Repair exceptions are only
+for exact-bound intermediate errors/test failures; gaps/refusal/interruption/unknown
+and all existing provider/authority/budget checks still veto paid continuation.
+Focused capture tests pass: native generic status, reviewed structured test/refusal/
+interruption, missing result, exact/late event linkage, ownership/contract/scope/
+clock checks, scope opt-in, duplicate retries, gaps/overflow/restart, privacy and
+API-vs-final-result distinctions. A joined real Node → Django metadata API test
+records an intermediate test failure and still reserves for exact-bound repair.
+An intermediate focused run caught an indentation typo in the new module; it was
+fixed without changing assertions. Operating details and unsupported native fields
+are in [TOOL_STATUS_CAPTURE.md](TOOL_STATUS_CAPTURE.md).
+A full run then caught one legacy default-field-list mismatch. Kept the original
+`COLLECTION_FIELDS` defaults unchanged and introduced a separate canonical
+`SUPPORTED_COLLECTION_FIELDS` list for explicit opt-in configuration. Existing
+scope preservation and its unchanged assertion remain; no auto-approval added.
+
+**Final verification:** **798 Python / 47 JavaScript tests pass**, retaining the
+774 Python / 38 JS baseline with 24 new Python and nine JS capture regressions.
+`git diff --check` passes. Python also invokes JavaScript tests; these are not
+independent host/quality/security certifications. Legacy assertions remain intact.
+Tests also distinguish intermediate test failure from later separate human success,
+refuse success with missing coverage, and keep diagnostic checks category-specific.
+Reviewed artifacts, role history, all prior commits and private stores are preserved.
+Migration 0010 was exercised only on new temporary synthetic stores. No dependency/
+plugin installations, private sessions, owner-store changes, real provider calls
+or public push occurred. Generic native capture is implemented; finer native
+permission/cancellation/test/provider-attempt attribution remains unsupported unless
+the reviewed structured tool contract supplies its explicit status. Actual installed
+OpenCode hook/peer/tool validation remains separately deferred.
+
 ### Remaining build packages, in execution order
 
 | ID | Build package | Required result | Dependency / boundary |

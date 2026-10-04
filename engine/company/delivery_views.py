@@ -19,6 +19,12 @@ from .connectors import _link
 
 
 @delegated
+def tool_status(credential, member, value):
+    from .tool_observations import observe
+    return observe(credential, member, value)
+
+
+@delegated
 def options(credential, member, value):
     """Guided metadata choices are not execution permission or human approval."""
     from .models import GatewayCredential, ScopedSelectionRuntime
@@ -42,6 +48,8 @@ def options(credential, member, value):
             guard = live_guard(approval, member.company, allow_future_recommendations=True)
             routes = []
             for route in approval.data["routes"]:
+                if live_guard(approval, member.company, allow_future_recommendations=True, tool_task_types=(route["task_type"],))["status"] != "current":
+                    continue
                 try:
                     envelope = delivery.envelope_for(member.company, route["model"])
                 except ValidationError:
@@ -51,7 +59,7 @@ def options(credential, member, value):
                 routes.append({"task_type": route["task_type"], "model": route["model"], "output_token_ceiling": envelope.output_token_ceiling,
                                "minimum_attempt_reserve_usd": str(envelope.maximum(1)), "local_tools": tools})
             scopes.append({"scope_ref": str(approval.reference), "pilot_id": scope["pilot_id"], "status": current["status"],
-                "authority_current": guard["status"] == "current", "routes": routes, "accounting": selection.accounting(runtime, current)})
+                "authority_current": guard["status"] == "current" or bool(routes), "routes": routes, "accounting": selection.accounting(runtime, current)})
     gateways = []
     for gateway in GatewayCredential.objects.filter(company=member.company, revoked_at__isnull=True, expires_at__gt=timezone.now()):
         if gateway.scope["repository_ref"] != credential.scope["repository_ref"] or member.developer_id not in gateway.scope["user_mapping"]:
@@ -67,11 +75,22 @@ def options(credential, member, value):
     from engine.schemas import Policy
     policy = Policy.from_dict(member.company.policy)
     required = ("actual_model", "request_kind", "cost_usd", "latency_ms", "input_tokens", "output_tokens", "cached_input_tokens", "reasoning_tokens")
+    from .services import TOOL_CAPTURE_FIELDS
+    from .models import DeliveryBinding
+    from .tool_observations import state as tool_state
+    capture_tasks = []
+    if set(TOOL_CAPTURE_FIELDS).issubset(credential.scope["collection_fields"]):
+        for binding in DeliveryBinding.objects.filter(connector_task__credential=credential, connector_task__closed_at__isnull=True,
+            tool_observations__isnull=False).select_related("connector_task").distinct():
+            capture_tasks.append({"connector_task_ref": str(binding.connector_task.reference), "session_ref": binding.connector_task.session_ref,
+                                  "sequence": tool_state(binding)["sequence"]})
     return {"schema_version": 1, "company_id": str(member.company.company_id), "deployment_id": str(member.company.deployment_id),
             "company_revision": member.company.revision, "developer_id": member.developer_id, "repository_ref": credential.scope["repository_ref"],
             "source_kind": credential.scope["source_kind"], "scopes": scopes, "gateways": gateways,
             "models": [model.model_id for model in policy.models if model.approved],
             "collection_supported": set(required).issubset(credential.scope["collection_fields"]),
+            "tool_capture_approved": set(TOOL_CAPTURE_FIELDS).issubset(credential.scope["collection_fields"]),
+            "tool_capture_tasks": capture_tasks,
             "new_reservation": False, "execution_sent": False, "note": "Choices only. Each new task still rechecks independent verification, separate human approval and shared accounting."}
 
 
@@ -107,7 +126,7 @@ def preflight(credential, member, value):
     runtime = ScopedSelectionRuntime.objects.select_related("authorization").filter(authorization__reference=value["scope_ref"], authorization__company=member.company).first()
     if (runtime is None or selection._state(runtime)["status"] != "active" or link.sequence or link.closed_at
         or request["boundary"] != "new_task" or task.to_dict() != task_ledger(link.task).recommendations[0].task.to_dict()
-        or live_guard(runtime.authorization, member.company, allow_future_recommendations=True)["status"] != "current"):
+        or live_guard(runtime.authorization, member.company, allow_future_recommendations=True, tool_task_types=(task.task_type,))["status"] != "current"):
         raise ValidationError("No current independently approved unused task boundary is available.")
     route = next((row for row in runtime.authorization.data["routes"] if row["task_type"] == task.task_type), None)
     if route is None:
