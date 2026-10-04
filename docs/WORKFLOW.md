@@ -107,6 +107,17 @@ requirements must be validated before claiming useful routing or savings.
 
 ## Current implementation versus the goal
 
+**Latest focused follow-up (2026-10-04):** narrow delivery/accounting/startup, metadata-
+only tool capture and auditable known-cost corrections are implemented conditionally.
+The owner subsequently approved routine progress for matching model reports and first
+positive human results on new, closed, healthy exact-bound pilot tasks. These remain
+unverified incoming feedback for explicit learning review, never replacement evidence,
+automatic fitting/scope expansion or stopped-pilot resume. New negatives, unknowns,
+gaps, overrides and corrected/reviewed evidence preserve existing safety vetoes. See
+[PILOT_FEEDBACK.md](PILOT_FEEDBACK.md) and current [TASKS.md](TASKS.md); earlier status
+paragraphs below describe prior milestones. W-01–W-08 are unchanged; installed-host,
+approved real evidence/verifiers and deployment validation remain separate gates.
+
 Available supporting tools: local policy registry/rules, offline replay and
 candidate reports, conditional uncertainty reporting, local history/rollback,
 privacy checks/audits, and a mock-tested read-only session snapshot wrapper.

@@ -462,11 +462,12 @@ def status(request, reference):
         return {"scope_record": approval, "selection_status": "unactivated", "revision": 0,
                 "guard": live_guard(approval, member.company), "accounting": None, "events": []}
     state = _state(runtime)
-    from .pilot_feedback import learning_freshness
+    from .pilot_feedback import learning_freshness, pending_review
     from .tasks import company_ledger
+    ledger = company_ledger(member.company, approval.review.data["learner"]["plan"]["source_kind"])
     return {"scope_record": approval, "selection_status": state["status"], "revision": state["revision"],
         "guard": live_guard(approval, member.company, allow_future_recommendations=True), "accounting": accounting(runtime, state), "events": runtime.journal["events"],
-        "learning_freshness": learning_freshness(approval.review, company_ledger(member.company, approval.review.data["learner"]["plan"]["source_kind"]))}
+        "learning_freshness": learning_freshness(approval.review, ledger), "incoming_feedback": pending_review(approval, ledger)}
 
 
 def monitor_observation(member, link, observation):

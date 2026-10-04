@@ -304,3 +304,31 @@ owner-store changes, provider/model calls, activation or public push. Continuous
 external notifications/supervision and other remaining software are separate in `TASKS.md`;
 real verifier/installed-host/evidence/deployment validation stays deferred. See
 [COST_CORRECTIONS.md](COST_CORRECTIONS.md).
+
+## Continuous pilot feedback — owner choice 2026-10-04
+
+Reproduced the current limitation with controlled delivery: after healthy owner-close,
+a matching actual-model report leaves runtime active but blocks its guard; even a first
+positive human result then pauses it. The owner explicitly selected **Routine progress**
+over preserving those vetoes with explicit-review-only software.
+
+Extend the earlier acceptance-only exception narrowly: matching model reports and first
+positive human results on healthy newly bound tasks with closed, complete, matching
+delivery evidence may remain pending learning review without stopping an otherwise
+eligible pilot. This is an execution-freshness distinction, not verification of human
+outcomes, automatic learning, new approval, expanded routes or a silently changed model.
+The exact policy/learner/review/readiness/human approval remains immutable; subsequent
+learning/publication still needs explicit fitting/review.
+
+Negatives, unknown results/obligations, gaps, mismatches, overrides, result corrections,
+changed reviewed evidence and existing authority/model/budget vetoes remain blockers.
+No routine feedback can resume a paused/revoked pilot, reset lifetime limits/slots,
+restore a claim or loosen the independently approved intermediate-tool repair rules.
+Incoming records and historical roles remain auditable and readable across participating
+developers; no provider/tool status is fabricated as a successful engineering result.
+
+This choice authorizes the focused conditional software/test batch only. Preserve prior
+commits, uncommitted handoff/documentation and private stores. No dependency/plugin
+installation, private-session/store access, owner-store changes, real provider/model
+calls, activation or public push. External notifications/supervision, broader tool support
+and installed-host/real evidence/deployment validation remain separate.

@@ -216,7 +216,8 @@ def live_guard(authorization, company, allow_future_recommendations=False, deliv
         if _roster(company).to_dict() != data["approver_roster"]:
             raise ValidationError("Current designation roster differs from the live approval.")
         verify_review(authorization.review, company, allow_future_recommendations=allow_future_recommendations, delivery_retry_ref=delivery_retry_ref,
-                      tool_binding_ref=tool_binding_ref, tool_task_types=data["scope"]["task_types"] if tool_task_types is None else tool_task_types)
+                      tool_binding_ref=tool_binding_ref, tool_task_types=data["scope"]["task_types"] if tool_task_types is None else tool_task_types,
+                      execution_authorization=authorization)
         scope = PilotScope.from_dict(data["scope"])
         for developer in scope.developer_ids:
             if not Membership.objects.filter(company=company, developer_id=developer, active=True, user__is_active=True,

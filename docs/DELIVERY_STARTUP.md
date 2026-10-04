@@ -70,6 +70,16 @@ or raw-content spool is introduced.
 
 ### Acceptance, learning freshness and execution safety
 
+**Continuous-feedback follow-up (2026-10-04):** the owner explicitly approved a narrow
+routine-progress exception for matching model reports and first positive human results
+on new, closed, healthy exact-bound pilot tasks. The prior acceptance-only rules below
+remain historical context; negative/unknown/gap/override/revision/authority/budget vetoes
+and exact-bound intermediate repair remain unchanged. See
+[PILOT_FEEDBACK.md](PILOT_FEEDBACK.md). This never updates the learner/approval automatically.
+Current regression verification for this follow-up: **880 Python / 47 JavaScript tests
+pass**, retaining the 838 Python baseline and all earlier assertions. Earlier counts
+describe historical startup/acceptance/correction batches, not real-host validation.
+
 The acceptance/freshness conflict was reproduced in the delegated API and corrected
 on 2026-10-04. An eligible new-task recommendation can be accepted before paid
 activity and continue through the otherwise valid approved pilot. Acceptance alone

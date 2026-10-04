@@ -97,7 +97,7 @@ def prepare_review(request, plan_value):
         return review
 
 
-def verify_review(review, company, allow_future_recommendations=False, delivery_retry_ref=None, tool_binding_ref=None, tool_task_types=None):
+def verify_review(review, company, allow_future_recommendations=False, delivery_retry_ref=None, tool_binding_ref=None, tool_task_types=None, execution_authorization=None):
     if review.company_id != company.pk or review.data.get("company_id") != str(company.company_id) or (
         review.data.get("deployment_id") != str(company.deployment_id)
     ):
@@ -114,8 +114,8 @@ def verify_review(review, company, allow_future_recommendations=False, delivery_
         if not allow_future_recommendations:
             raise ValidationError("Company task evidence or policy changed; regenerate and separately review before approval.")
         # Approved execution uses fixed reviewed evidence plus current safety,
-        # not publication/refitting freshness. Only new timely acceptance is
-        # benign feedback; prior observations and new negatives still veto.
+        # not publication/refitting freshness. Timely acceptance and exact healthy
+        # bound-task routine progress are checked separately; negatives still veto.
         fixed = ("company_id", "deployment_id", "learner", "identity_source", "outcome_truth_verified")
         if any(payload[key] != expected[key] for key in fixed):
             raise ValidationError("Frozen review identity/policy/learner changed; new scope approval is required.")
@@ -139,7 +139,7 @@ def verify_review(review, company, allow_future_recommendations=False, delivery_
                          task_types=learner.plan.task_types if tool_task_types is None else tool_task_types)
     if allow_future_recommendations:
         from .pilot_feedback import verify_for_execution
-        verify_for_execution(review, ledger, learner)
+        verify_for_execution(review, ledger, learner, execution_authorization)
     else:
         learner.verify_source(ledger)
     return ledger, learner, ReadinessReport.from_dict(review.data["report"])

@@ -269,6 +269,8 @@ def record_execution(user, reference, actual_model, expected_revision):
     task.revision += 1
     task.save(update_fields=("revision",))
     _append(task, member, "execution", item.to_dict(), timestamp)
+    from .selection import monitor_feedback
+    monitor_feedback(member, task)
     return task
 
 

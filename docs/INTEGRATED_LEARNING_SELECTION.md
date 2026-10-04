@@ -1,5 +1,18 @@
 # B-05 integrated learning and conditional scoped selection
 
+**Current continuous-feedback follow-up (2026-10-04):** the owner explicitly approved
+routine progress for matching model reports and first positive human results on new,
+closed, healthy exact-bound pilot tasks. Feedback stays pending explicit learning review,
+not verified success; negatives/unknowns/gaps/mismatches/overrides/revisions still block.
+No stopped-pilot auto-resume, silent fitting or expanded scope. See
+[PILOT_FEEDBACK.md](PILOT_FEEDBACK.md) and the current [TASKS.md](TASKS.md) build section.
+Narrow text/local-function delivery, startup/terminal wiring, metadata-only tool capture
+and known-cost corrections now exist in their newer operating guides. The older
+delivery/build counts and missing-adapter paragraphs below are historical milestones,
+not today's software status or installed-host/provider/company readiness.
+Current routine-progress verification: **880 Python / 47 JavaScript tests pass**,
+retaining the 838 Python baseline with 42 new regressions and unchanged assertions.
+
 **Updated:** 2026-10-04. **Build status:** versioned learner publication, historical
 learned suggestions, connector feedback/freshness, conditional scoped selection/
 reservation/claim/settlement, human controls, and adverse/concurrency tests are

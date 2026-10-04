@@ -61,6 +61,15 @@ lists and pairings are not enlarged by migration. No owner store was upgraded.
 
 ## Authority and exact boundaries
 
+The owner-approved routine-feedback follow-up separates matching closed-task model
+reports/first positive human results from incoming-learning staleness. Reports remain
+unverified, exact-bound and pending explicit review; negatives/unknowns/gaps/overrides/
+revisions still veto. No automatic fitting/expansion/resume is added. See
+[PILOT_FEEDBACK.md](PILOT_FEEDBACK.md); intermediate repair and cost-correction rules stay.
+The routine-progress follow-up passes **880 Python / 47 JavaScript tests**, retaining
+all 838 prior Python tests. Earlier counts are historical milestones; no installed-host,
+provider-billing, quality or production-readiness claim follows.
+
 The new-task boundary is an explicit unused company descriptor [fixed task
 metadata], not an inferred idle event. The delivery source allocates a future
 session ID, links its hash, and creates only that new root with the selected model.

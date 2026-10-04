@@ -18,7 +18,64 @@ Target the existing first integration choice: OpenCode V2 with documented APIs
 and company-managed API/gateway credentials. Do not attempt to support every
 coding client or build another general-purpose gateway to call this finished.
 
-### Current build — known-cost corrections (2026-10-04)
+### Current build — continuous pilot-feedback handling (2026-10-04)
+
+**Owner choice:** Routine progress, explicitly approved after reproducing matching
+actual-model reporting blocking the guard and a first positive result pausing a healthy
+closed-task pilot. Only exact new bound tasks with complete matching healthy delivery
+can qualify. Unknowns, negatives, gaps, mismatches, overrides and corrections still
+require review; no automatic learning, changed hashes/scope or stopped-pilot resume.
+
+- [x] Recover current task/decision/code state and preserve all 14 prior local commits
+  plus original uncommitted documentation/handoff/private stores.
+- [x] Reproduce routine-report/result blocking through real company services with
+  controlled provider responses; obtain the blocking product-policy choice.
+- [x] Recover the 838 Python / 47 JavaScript baseline on an unchanged source snapshot.
+- [x] Implement exact-bound routine-feedback classification and immediate monitoring
+  for model reports, retaining negative/unknown/corrected evidence and frozen approvals.
+- [x] Show readable senior-prioritized incoming feedback and pending-review/learning
+  states, reusing existing authority and event history.
+- [x] Cover next-task delivery, multiple developers, duplicates/delays/corrections,
+  adverse authority/model/budget/gap/provider/tool cases and regression/privacy checks.
+- [x] Update operating docs, full verification and separate logical local commit (this routine-progress batch).
+
+**Reproduction values:** before feedback runtime/guard = `active/current`; after
+matching model report = `active/blocked`; after first positive human result =
+`paused/blocked`. Task/pilot spent `0.002` USD, pilot remaining `0.998` USD, zero real
+provider calls. These controlled values reproduce a software veto, not outcome truth.
+
+**Final verification:** **880 Python / 47 JavaScript tests pass**, retaining the
+recovered **838 Python / 47 JavaScript** baseline with **42 new focused regressions**.
+All old assertions remain unchanged; `git diff --check` passes. Python also invokes
+JavaScript, so these are not independent certifications. Source remained unchanged
+during both full baseline/regression runs. The first focused 29-case run found two fixture errors:
+the preserved attribution guard refuses a positive result with unknown auxiliary
+delivery cost; another test read a stale task object. Assertions/guards remain intact.
+The 42 new focused tests, 20 acceptance regressions and 24 tool-status regressions also
+pass separately. No migrations are added/edited. The controlled walkthrough now retains
+`active/current` after model and positive result reports, while learning freshness remains
+`needs_review`. The next selected task still holds `0.10` USD: pilot spent `0.002`, reserved
+`0.10`, committed `0.102`, remaining `0.898` USD, one remaining lifetime task slot.
+No verified human outcome, new learner, pilot scope or quality/savings is inferred.
+All 14 earlier local commits and original uncommitted handoff/documentation are preserved;
+only this batch's documentation changes are committed. Private stores remain untouched.
+Operating details: [PILOT_FEEDBACK.md](PILOT_FEEDBACK.md).
+
+External notifications/supervision, broad tool/runtime
+support and deferred installed-host/real verifier/company/deployment validation remain
+separate work. No installs, private access, owner-store edits, real calls or public push.
+
+**After this routine-progress batch:** strict future publication still needs explicit
+fitting/review; result corrections, disagreements and any broader continuous adaptation
+retain review gates, not silently widened exemptions. External notifications/escalation/
+process supervision are the next separate operational software package. Direct physical
+stream/lost-delivery recovery, automatic subagent/new-run attribution, finer universal
+native tool/provider attribution, broader shell/remote/non-text/extra-charge support and
+positive company-specific real verifiers/evidence remain unsupplied. Installed-host,
+approved real company/data/billing/quality and deployment validation remain separately
+deferred. Do not implement those other packages automatically inside this batch.
+
+### Completed known-cost correction batch (2026-10-04, `b7efa26`)
 
 **Focused scope:** auditable independently verified revisions of known delivery costs,
 on OpenCode V2 → existing LiteLLM Proxy → company-managed OpenAI API. No broader tools,
@@ -56,7 +113,7 @@ work remain preserved; only this batch's documentation hunks are committed. Oper
 contract:
 [COST_CORRECTIONS.md](COST_CORRECTIONS.md).
 
-**Remaining software — separate work, not automatically implemented:**
+**Remaining software recorded after the cost batch — historical; current follow-up above:**
 
 | Work | Current gap |
 | --- | --- |
