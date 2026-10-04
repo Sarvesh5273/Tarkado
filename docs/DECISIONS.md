@@ -214,3 +214,26 @@ No new provider/gateway, credentials, live calls, or dependency is selected here
 | 2026-10-04 | Owner accepted B-03 browser-first Django interface direction and requested explanation of the future in-tool experience. Recorded UI-01–UI-03 after checking official OpenCode V2 skills/plugins/CLI documentation. Documentation/design only: existing UI/authority code is preserved; no connector/skill/plugin was installed or claimed complete, and live access remains deferred. |
 | 2026-10-04 | Owner accepted no Laya for B-04 and requested the explicit-task connector build. Implemented scoped delegated browser/API records and inactive V2 server/CLI plugin source, preserving manual choice, privacy, negative/unknown signals, and separate company approval authority. 637 Python and 14 JavaScript tests pass; installed TUI/host and approved real-session validation remain pending. No dependencies/plugin activation, private sessions, provider calls, user-store changes, or live routing. |
 | 2026-10-04 | Owner deferred real-client/company checks during build and requested B-05. Implemented learner publication/reversal/future manual guidance and conditional exact-scope selection/accounting behind separate readiness and atomic-admission gates. 671 Python and 19 JavaScript tests pass. Missing actual capped new-task delivery remains unfinished software, not a validation checkbox; no live switch/provider/private access/dependencies/activation/commits/pushes. |
+
+## Acceptance/freshness separation — owner-directed correction 2026-10-04
+
+An eligible developer's timely acceptance of a new task recommendation must not,
+by itself, pause the task or invalidate its otherwise valid approved pilot. The
+delegated API reproduced the conflict: a successful acceptance changed an active
+conditional runtime to paused before provider admission.
+
+Keep the pilot's exact reviewed policy, fixed-cutoff learner/evidence, human approval
+and independent readiness assessment immutable. New owned per-task feedback remains
+available for subsequent explicit fitting/review, including historical roles,
+corrections and everyone's negatives. Learning/publication freshness is displayed
+separately from execution safety; its staleness alone cannot stop eligible accepted
+work. There is no silent refit, changed threshold, source-hash replacement, scope
+expansion or engineering-success/pilot-approval inference from acceptance.
+
+The execution check exempts only timely acceptance on genuinely new, previously
+unreviewed recommendations from the new-feedback freshness veto. Relevant rejects,
+failures, unknown obligations, gaps, mismatches, incompatible models, altered
+reviewed observations, revoked/expired authority and budget limits still block.
+Other feedback/current-task record types get no blanket exception. Paused pilots
+are not automatically resumed. This implements W-03/W-04/W-07/W-08; it does not
+change them or approve installation, private sessions, real calls or public push.

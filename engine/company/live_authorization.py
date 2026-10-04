@@ -247,7 +247,8 @@ def reverse_live(member, authorization, action, expected_revision, reason):
 
 def live_status(authorization, company):
     data = validate_live(authorization)
-    guard = live_guard(authorization, company)
+    from .models import ScopedSelectionRuntime
+    guard = live_guard(authorization, company, allow_future_recommendations=ScopedSelectionRuntime.objects.filter(authorization=authorization).exists())
     state = "approved" if data["scope_approved"] else "rejected"
     if authorization.revoked_at is not None:
         state = "withdrawn"
@@ -270,7 +271,8 @@ def check_live_scope(request, reference, task_value, repository_ref, boundary, m
         authorization = _pilot(member, reference)
         if authorization.data.get("target") != "live":
             raise ValidationError("Simulation approval cannot authenticate live scope.")
-        guard = live_guard(authorization, member.company)
+        from .models import ScopedSelectionRuntime
+        guard = live_guard(authorization, member.company, allow_future_recommendations=ScopedSelectionRuntime.objects.filter(authorization=authorization).exists())
         scope_current = False
         if guard["status"] == "current":
             task = TaskRequest.from_dict(task_value)

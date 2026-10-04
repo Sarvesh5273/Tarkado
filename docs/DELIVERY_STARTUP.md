@@ -46,14 +46,35 @@ restart does not resurrect in-memory delivery credentials. Historical task recov
 remains in the protected company browser; no private-session enumeration/messages
 or raw-content spool is introduced.
 
-### Existing evidence-freshness limitation
+### Acceptance, learning freshness and execution safety
 
-The existing experimental learner still requires explicit refitting/review after
-new category feedback/results. A new per-task response may therefore stale the
-current frozen pilot source and pause future delivery; these commands do not
-bypass that guard. Continuous approved-pilot feedback handling remains a separate
-workflow limitation to address before claiming a seamless real coding pilot.
-Unknown/failed obligations continue to block unsafe attempts and remain retained.
+The acceptance/freshness conflict was reproduced in the delegated API and corrected
+on 2026-10-04. An eligible new-task recommendation can be accepted before paid
+activity and continue through the otherwise valid approved pilot. Acceptance alone
+does not pause the task or pilot and is neither engineering success nor pilot approval.
+
+Three records/checks stay separate:
+
+1. **Reviewed basis:** the exact policy, fixed-cutoff learner/evidence report,
+   designated human approval and independent readiness assessment remain immutable.
+   Source hashes, thresholds, scope and model bindings are not replaced.
+2. **Incoming learning feedback:** acceptance remains in the owned append-only
+   task history, with its original role/time and recommendation link. Strict
+   learning/publication freshness may say `needs_review`/blocked for subsequent
+   fitting or new published suggestions. The pilot page shows that separately;
+   it is not an execution veto by itself. Refitting/review is explicit, never silent.
+3. **Execution safety:** the fixed reviewed fit and prior reviewed observations are
+   still checked, together with current authority, compatibility, budget and negative
+   evidence. Only timely acceptance on a new, previously unreviewed recommendation
+   is benign. Reviewed-task changes, relevant rejects, executions/result revisions,
+   failures, unknown costs, gaps and model mismatches retain their conservative
+   checks. There is no blanket exemption for current-task events or future feedback.
+
+Duplicate responses remain idempotent; changed/stale/new late/wrong-owner responses
+are refused as before. Acceptance cannot resume a paused/revoked/expired pilot,
+refund an obligation, approve a model, expand scope or switch an active-task model.
+Positive or other later feedback can still require a new explicit category review;
+general continuous adaptation is not implemented by this focused acceptance fix.
 
 ## Company verifier startup — explicitly reviewed code
 
@@ -220,6 +241,6 @@ Primary references checked: official OpenCode V2
 [configuration](https://opencode.ai/v2/docs/config/), plus LiteLLM's
 [callback-instance/pre-call documentation](https://docs.litellm.ai/docs/proxy/call_hooks).
 
-Regression verification: **737 Python / 33 JavaScript tests pass**; the original
+Regression verification after the acceptance fix: **757 Python / 33 JavaScript tests pass**; the original
 assertions are retained and `git diff --check` passes. Python also runs JavaScript
 tests. These numbers are regression checks, not host/billing/production evidence.

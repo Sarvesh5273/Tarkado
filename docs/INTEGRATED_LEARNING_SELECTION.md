@@ -136,6 +136,17 @@ actual capped delivery and current claim consumption before this becomes live us
 
 ## Frozen source versus current feedback
 
+**Acceptance correction (2026-10-04):** execution on the existing conditional pilot
+now validates the immutable fitted source and current safety independently from
+strict future-learning freshness. Timely acceptance on a new, previously unreviewed
+recommendation alone cannot pause eligible delivery. Acceptance remains pending
+preference for the next explicit learning review; it does not rewrite the reviewed
+artifact, approval or readiness-request/source fingerprints. The pilot page exposes
+`learning_freshness` separately. Relevant negative/unknown/gap/mismatch signals,
+reviewed-observation changes and other new category feedback still veto. Existing
+strict learner publication/refitting semantics remain. See
+[DELIVERY_STARTUP.md](DELIVERY_STARTUP.md#acceptance-learning-freshness-and-execution-safety).
+
 Ordinary B-02 scope/readiness checks remain exact/full-source by default. Only
 the conditional runtime uses the opt-in frozen-validation view: existing reviewed
 task observations must remain identical; future pending recommendations may be
@@ -144,10 +155,12 @@ the existing learner/source checks. The exact original review hash is retained,
 not replaced with a freshly favorable report. A new source requires refit/review,
 never silent threshold tuning or first-pilot self-approval.
 
-The current learner conservatively stales on any new category feedback after its
-cutoff. Continuous adaptation and independently validated production criteria are
-not claimed; explicit refit/new review is required. This is a simple baseline,
-not proof of superior model choice or production savings.
+The current learner conservatively stales for future learning/publication on any
+new category feedback after its cutoff. That status alone is not the execution
+guard for an already eligible accepted task. Other feedback remains conservatively
+blocked for execution pending review. Continuous adaptation and independently
+validated production criteria are not claimed; explicit refit/new review is
+required. This is a simple baseline, not proof of superior model choice or savings.
 
 ## Installation/state preservation
 

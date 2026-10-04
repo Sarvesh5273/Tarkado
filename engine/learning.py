@@ -225,13 +225,18 @@ class LearnedModel:
         validated = LearnedModel.from_dict(self.to_dict())
         _write_private(json.dumps(validated.to_dict(), indent=2, ensure_ascii=False) + "\n", path)
 
-    def verify_source(self, ledger: FeedbackLedger) -> None:
+    def verify_fitted_source(self, ledger: FeedbackLedger) -> None:
+        """Check the exact fixed-cutoff fit, without deciding whether new feedback may execute."""
         ledger = FeedbackLedger.from_dict(ledger.to_dict())
         if _fingerprint(ledger.team.to_dict()) != self.roster_sha256 or _source_digest(_view(ledger, self.plan)) != self.source_sha256:
             raise ValidationError("Learner source/roster no longer matches this feedback store; refit explicitly.")
         expected = fit_feedback(ledger, self.policy.policy, self.plan)
         if self.to_dict() != expected.to_dict():
             raise ValidationError("Learner evidence does not match its actual source records; refit rather than editing counts.")
+
+    def verify_source(self, ledger: FeedbackLedger) -> None:
+        # Future learning/publication retains the original strict freshness rule.
+        self.verify_fitted_source(ledger)
         recommendations = {item.recommendation_id: item for item in ledger.recommendations}
         executions = {item.execution_id: item for item in ledger.executions}
         cutoff = _timestamp(self.plan.cutoff)
@@ -241,6 +246,9 @@ class LearnedModel:
             rec = recommendations[recommendation_id]
             if rec.task.task_type in self.plan.task_types and _timestamp(item.timestamp) > cutoff:
                 raise ValidationError("New category feedback/results arrived after fitting; refit before making another learned suggestion.")
+        self.verify_negative_evidence(ledger)
+
+    def verify_negative_evidence(self, ledger: FeedbackLedger) -> None:
         # A chosen fitting subset must not hide known negative feedback elsewhere in the same store.
         full_evidence = feedback_summary(ledger, self.policy.policy)["groups"]
         for rule in _rules(list(self.evidence), self.plan):

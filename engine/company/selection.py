@@ -440,8 +440,11 @@ def status(request, reference):
         return {"scope_record": approval, "selection_status": "unactivated", "revision": 0,
                 "guard": live_guard(approval, member.company), "accounting": None, "events": []}
     state = _state(runtime)
+    from .pilot_feedback import learning_freshness
+    from .tasks import company_ledger
     return {"scope_record": approval, "selection_status": state["status"], "revision": state["revision"],
-        "guard": live_guard(approval, member.company, allow_future_recommendations=True), "accounting": accounting(runtime, state), "events": runtime.journal["events"]}
+        "guard": live_guard(approval, member.company, allow_future_recommendations=True), "accounting": accounting(runtime, state), "events": runtime.journal["events"],
+        "learning_freshness": learning_freshness(approval.review, company_ledger(member.company, approval.review.data["learner"]["plan"]["source_kind"]))}
 
 
 def monitor_observation(member, link, observation):
@@ -463,7 +466,7 @@ def monitor_observation(member, link, observation):
 
 
 def monitor_feedback(member, task):
-    """Later category feedback invalidates the frozen experimental source, not the running task model."""
+    """Current safety can pause execution; pending learning freshness alone cannot."""
     for runtime in ScopedSelectionRuntime.objects.filter(authorization__company=member.company,
         authorization__review__data__learner__plan__source_kind=task.source_kind).select_related("authorization"):
         state = _state(runtime)
@@ -471,7 +474,7 @@ def monitor_feedback(member, task):
             continue
         if live_guard(runtime.authorization, member.company, allow_future_recommendations=True)["status"] == "current":
             continue
-        _append(runtime, member, "monitor", {"reason": "New category feedback/results made the exact reviewed evidence stale. Stop future selection; preserve rejects, failures, unknowns, and costs for another review.",
+        _append(runtime, member, "monitor", {"reason": "Current category feedback/evidence or authority failed execution safety checks. Stop future selection; preserve rejects, failures, unknowns, and costs for another review.",
                                             "connector_task_ref": str(task.reference)})
         _audit(member, "selection_feedback_pause", scope_ref=str(runtime.authorization.reference), task_ref=str(task.reference),
                in_flight_model_changed=False)

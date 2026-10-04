@@ -102,8 +102,9 @@ def verify_review(review, company, allow_future_recommendations=False, delivery_
     if payload != expected:
         if not allow_future_recommendations:
             raise ValidationError("Company task evidence or policy changed; regenerate and separately review before approval.")
-        # B-05 freezes the validation artifact, while future pending recommendations
-        # may be added. Existing observations and every new negative/gap still veto.
+        # Approved execution uses fixed reviewed evidence plus current safety,
+        # not publication/refitting freshness. Only new timely acceptance is
+        # benign feedback; prior observations and new negatives still veto.
         fixed = ("company_id", "deployment_id", "learner", "identity_source", "outcome_truth_verified")
         if any(payload[key] != expected[key] for key in fixed):
             raise ValidationError("Frozen review identity/policy/learner changed; new scope approval is required.")
@@ -121,7 +122,11 @@ def verify_review(review, company, allow_future_recommendations=False, delivery_
                 raise ValidationError("New connector negative/gap/multi-model observations require another scope review.")
         from .delivery_evidence import verify_frozen
         verify_frozen(payload.get("delivery_observations", []), expected.get("delivery_observations", []), retry_binding_ref=delivery_retry_ref)
-    learner.verify_source(ledger)
+    if allow_future_recommendations:
+        from .pilot_feedback import verify_for_execution
+        verify_for_execution(review, ledger, learner)
+    else:
+        learner.verify_source(ledger)
     return ledger, learner, ReadinessReport.from_dict(review.data["report"])
 
 

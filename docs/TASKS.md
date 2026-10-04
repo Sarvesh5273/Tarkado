@@ -18,6 +18,38 @@ Target the existing first integration choice: OpenCode V2 with documented APIs
 and company-managed API/gateway credentials. Do not attempt to support every
 coding client or build another general-purpose gateway to call this finished.
 
+### Focused acceptance/freshness correction — 2026-10-04
+
+Baseline before edits: **737 Python / 33 JavaScript tests pass**. Reproduced through
+the real delegated API on a synthetic store: acceptance returns HTTP 200, but the
+active pilot becomes paused and its guard blocked before a provider attempt.
+
+- [x] Inspect/reproduce the execution behavior, not only the documented limitation.
+- [x] Separate the immutable fixed-cutoff reviewed fit from incoming learning
+  freshness and current execution safety. Only timely acceptance on new, previously
+  unreviewed tasks avoids the freshness veto; negative/changed evidence stays checked.
+- [x] Verify accepted tasks reach the controlled provider; add adverse authority,
+  budget, failure/unknown/gap/mismatch, response-retry and next-review regressions.
+- [x] Finish full verification and update operating/decision docs.
+- [ ] Make a separate logical local commit; do not push.
+
+Reviewed policy/learner/evidence/approval and source hashes are not rewritten;
+there is no retraining, threshold change, scope expansion, success label or pilot
+approval inferred from acceptance. Existing strict future-publication/refitting
+freshness remains and is displayed separately from execution status.
+
+**Verification:** **757 Python / 33 JavaScript tests pass** (737 retained Python
+baseline + 20 new acceptance regressions); `git diff --check` passes. Coverage
+includes acceptance before selection/claim and after binding, controlled-provider
+admission, unchanged readiness-request/artifact content, learning-only staleness,
+subsequent review retention, current negatives, stopped/expired authority, budget
+exhaustion, stale/changed/owned/timed response semantics and result corrections.
+Python also invokes JavaScript, so these are not independent certifications.
+`DELIVERY_STARTUP.md` and `DECISIONS.md` document the separation. No existing
+assertion was weakened; no installation, private session/store access, real
+provider call, automatic retraining or public push occurred. Tool-coding support
+and installed-host/provider validation remain separate, unfinished work.
+
 ### Remaining build packages, in execution order
 
 | ID | Build package | Required result | Dependency / boundary |
