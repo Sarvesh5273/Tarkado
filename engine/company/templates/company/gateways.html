@@ -1,0 +1,5 @@
+{% extends 'company/base.html' %}{% block content %}
+<h1>Scoped gateway machine identities</h1><p>Gateway access is separate from human feedback and pilot approval. No provider API key is requested. Issuing a credential does not install a callback or authorize generation.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Issue explicitly scoped machine credential</button></form>
+{% for gateway in gateways %}<section class="card"><p>{{ gateway.gateway_id }} · repository {{ gateway.scope.repository_ref }} · expires {{ gateway.expires_at|date:'c' }}{% if gateway.revoked_at %} · revoked{% endif %}</p><a href="{% url 'company-gateway-revoke' gateway.reference %}">Revoke and preserve obligations</a></section>{% endfor %}
+{% endblock %}

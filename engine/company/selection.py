@@ -47,9 +47,39 @@ def _state(runtime):
         integer(event["sequence"], "sequence")
         if event["sequence"] != sequence or event["previous_sha256"] != previous or event["sha256"] != _fingerprint({key: value for key, value in event.items() if key != "sha256"}) or timestamp and at < timestamp:
             raise ValidationError("Selection journal sequence/time/content is inconsistent; history cannot be reset.")
-        action = choice(event["action"], "selection_action", ("activate", "pause", "resume", "revoke", "rollback", "select", "claim", "settle", "monitor"))
+        action = choice(event["action"], "selection_action", ("activate", "pause", "resume", "revoke", "rollback", "select", "claim", "settle", "monitor", "delivery_monitor", "delivery_settle"))
         payload = event["payload"]
         actor = event["actor"]
+        if action in ("delivery_monitor", "delivery_settle"):
+            # A gateway is a machine principal, not a developer or human approver.
+            from .models import DeliveryBinding, GatewayCredential
+            from .delivery import state as delivery_state
+            object_fields(actor, ("gateway_ref", "gateway_id"), ("gateway_ref", "gateway_id"))
+            gateway = GatewayCredential.objects.filter(reference=actor["gateway_ref"], gateway_id=actor["gateway_id"], company=runtime.authorization.company).first()
+            binding = DeliveryBinding.objects.filter(reference=payload.get("binding_ref"), runtime=runtime, gateway__gateway_id=actor["gateway_id"]).first()
+            if gateway is None or binding is None or binding.selection_id not in state["claims"]:
+                raise ValidationError("Delivery accounting has no exact historical machine/task/claim binding.")
+            if action == "delivery_monitor":
+                object_fields(payload, ("reason", "binding_ref"), ("reason", "binding_ref"))
+                text(payload["reason"], "reason")
+                if state["status"] != "active":
+                    raise ValidationError("Only active delivery can be paused by monitoring.")
+                state["status"] = "paused"
+            else:
+                object_fields(payload, ("selection_id", "cost_usd", "outcome", "binding_ref"), ("selection_id", "cost_usd", "outcome", "binding_ref"))
+                key = payload["selection_id"]
+                delivery = delivery_state(binding)
+                rows = list(delivery["attempts"].values())
+                expected_outcome = "failed" if any(row["outcome"] in ("failed", "retryable_failure") for row in rows) else "completed" if rows else "cancelled"
+                if (key != binding.selection_id or key in state["settlements"] or not delivery["closed"] or delivery["unknown_attempts"]
+                    or number(payload["cost_usd"], "cost_usd") != Decimal(delivery["known_cost_usd"]) or payload["outcome"] != expected_outcome):
+                    raise ValidationError("Gateway settlement differs from closed complete attempt accounting.")
+                state["settlements"][key] = {k: payload[k] for k in ("selection_id", "cost_usd", "outcome")}
+                if state["status"] == "active" and (expected_outcome == "failed" or Decimal(payload["cost_usd"]) > Decimal(state["decisions"][key]["reserve_usd"])):
+                    state["status"] = "paused"
+            state["revision"] = sequence
+            previous, timestamp = event["sha256"], at
+            continue
         actor_fields = ("account_id", "developer_id", "role", "active", "participating", "can_manage_company", "can_approve_pilots")
         object_fields(actor, actor_fields, actor_fields)
         integer(actor["account_id"], "account_id")
@@ -74,6 +104,10 @@ def _state(runtime):
             if action == "resume" and any(item["outcome"] == "failed" or Decimal(item["cost_usd"]) > Decimal(state["decisions"][key]["reserve_usd"])
                                           for key, item in state["settlements"].items()):
                 raise ValidationError("Recorded failure/overrun requires a new scope, not unchanged resume.")
+            if action == "resume":
+                from .delivery import resume_blocked
+                if resume_blocked(runtime, at=at):
+                    raise ValidationError("Unknown/failed delivery obligations forbid unchanged resume.")
             state["status"] = {"pause": "paused", "resume": "active", "revoke": "revoked", "rollback": "rolled_back"}[action]
         elif action == "monitor":
             object_fields(payload, ("reason", "connector_task_ref"), ("reason", "connector_task_ref"))
@@ -104,7 +138,9 @@ def _state(runtime):
             scope = runtime.authorization.data["scope"]
             route = next((row for row in runtime.authorization.data["routes"] if row["task_type"] == task.task_type), None)
             policy = Policy.from_dict(runtime.authorization.data["policy"]["policy"])
-            totals = accounting(runtime, state)
+            # Replay historical admission against its then-current reservations,
+            # not delayed obligations that arrived after this event.
+            totals = accounting(runtime, state, include_delivery=False)
             reserve = number(payload["reserve_usd"], "reserve_usd")
             if (route is None or task.developer_id not in scope["developer_ids"] or request["repository_ref"] != scope["repository_ref"]
                 or request["boundary"] != "new_task" or set(task.risk_tags) != {"low"}
@@ -148,12 +184,16 @@ def _state(runtime):
     return state
 
 
-def accounting(runtime, state=None):
+def accounting(runtime, state=None, include_delivery=True):
     state = state or _state(runtime)
     scope = runtime.authorization.data["scope"]
     spent = _money_total([Decimal(row["cost_usd"]) for row in state["settlements"].values()])
     pending = {key: row for key, row in state["decisions"].items() if key not in state["settlements"]}
-    held = _money_total([Decimal(row["reserve_usd"]) for row in pending.values()])
+    from .models import DeliveryBinding
+    from .delivery import state as delivery_state
+    obligations = {row.selection_id: Decimal(delivery_state(row)["obligation_usd"]) for row in DeliveryBinding.objects.filter(runtime=runtime)
+                   if row.selection_id in pending} if include_delivery else {}
+    held = _money_total([max(Decimal(row["reserve_usd"]), obligations.get(key, Decimal(0))) for key, row in pending.items()])
     committed = _money_total([spent, held])
     return {"selected_tasks": len(state["decisions"]), "claimed_tasks": len(state["claims"]), "pending_tasks": len(pending),
             "settled_tasks": len(state["settlements"]), "spent_usd": str(spent), "reserved_usd": str(held),
@@ -222,6 +262,8 @@ def control(request, password, code, reference, action, expected_revision, reaso
 @delegated_transaction
 def select(member, reference, value, connector_link=None):
     """Called inside a serialized trusted service transaction; this never dispatches a model."""
+    from .operations import require_collection_open
+    require_collection_open(member.company)
     from .authorization import _pilot
     approval = _pilot(member, reference)
     if approval.data.get("target") != "live":
@@ -336,6 +378,9 @@ def settle(member, reference, selection_id, cost, outcome):
     runtime = ScopedSelectionRuntime.objects.select_related("authorization").filter(authorization=approval).first()
     if runtime is None:
         raise ValidationError("No conditional accounting runtime exists for this scope.")
+    from .models import DeliveryBinding
+    if DeliveryBinding.objects.filter(runtime=runtime, selection_id=selection_id).exists():
+        raise ValidationError("Bound delivery must settle its physical attempts through the authenticated gateway; manual settlement cannot release its budget.")
     state = _state(runtime)
     row = state["decisions"].get(selection_id)
     if row is None or row["request"]["task"]["developer_id"] != member.developer_id:
@@ -354,6 +399,28 @@ def settle(member, reference, selection_id, cost, outcome):
     _append(runtime, member, "settle", {"selection_id": selection_id, "cost_usd": str(cost), "outcome": outcome})
     _audit(member, "selection_settle", scope_ref=str(reference), selection_ref=selection_id, cost_usd=str(cost), outcome=outcome)
     return accounting(runtime)
+
+
+def delivery_event(binding, gateway, action, payload):
+    """Append machine accounting only. No human response/approval is fabricated."""
+    runtime = binding.runtime
+    runtime.refresh_from_db()
+    current = _state(runtime)
+    if action == "delivery_monitor" and current["status"] != "active":
+        return
+    if action == "delivery_settle" and binding.selection_id in current["settlements"]:
+        existing = current["settlements"][binding.selection_id]
+        if existing != payload:
+            raise ValidationError("Closed gateway settlement changed; preserve immutable accounting.")
+        return
+    events = runtime.journal["events"]
+    event = {"sequence": len(events) + 1, "timestamp": timezone.now().isoformat(), "action": action,
+             "actor": {"gateway_ref": str(gateway.reference), "gateway_id": gateway.gateway_id},
+             "payload": {**payload, "binding_ref": str(binding.reference)}, "previous_sha256": events[-1]["sha256"]}
+    event["sha256"] = _fingerprint(event)
+    runtime.journal = {**runtime.journal, "events": events + [event]}
+    _state(runtime)
+    runtime.save(update_fields=("journal",))
 
 
 @transaction.atomic

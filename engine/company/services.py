@@ -29,6 +29,9 @@ COLLECTION_REQUIRED = ("task_id", "session_id", "developer_id", "timestamp", "se
 CONNECTOR_FIELDS = ("observation_kind", "request_kind", "http_status", "attempt", "retry", "coverage_status")
 # Additive fields do not expand any existing installation's approved collection scope.
 COLLECTION_FIELDS += CONNECTOR_FIELDS
+# These supported measurements remain unapproved in existing stores/pairings.
+DELIVERY_FIELDS = ("input_tokens", "output_tokens", "cached_input_tokens", "reasoning_tokens")
+COLLECTION_FIELDS += DELIVERY_FIELDS
 LOGIN_FAILURE_LIMIT = 8
 LOGIN_FAILURE_WINDOW = timedelta(minutes=15)
 

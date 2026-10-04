@@ -50,9 +50,10 @@ def controls(request, reference):
             from .models import ScopedSelectionRuntime
             runtime = ScopedSelectionRuntime.objects.get(authorization=state["scope_record"])
             current = selection._state(runtime)
+            from .delivery import resume_blocked
             from decimal import Decimal
-            if not any(item["outcome"] == "failed" or Decimal(item["cost_usd"]) > Decimal(current["decisions"][key]["reserve_usd"])
-                       for key, item in current["settlements"].items()):
+            if not resume_blocked(runtime) and not any(item["outcome"] == "failed" or Decimal(item["cost_usd"]) > Decimal(current["decisions"][key]["reserve_usd"])
+                                                     for key, item in current["settlements"].items()):
                 actions.insert(0, ("resume", "Resume after current scope checks"))
     form = SelectionControlForm(request.POST if request.method == "POST" else None, choices=actions,
                                 initial={"expected_revision": state["revision"], "preview": "scope"})

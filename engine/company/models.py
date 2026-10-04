@@ -237,3 +237,33 @@ class LearningPublication(models.Model):
 class ScopedSelectionRuntime(models.Model):
     authorization = models.OneToOneField(PilotAuthorization, on_delete=models.PROTECT)
     journal = models.JSONField()
+
+
+class GatewayCredential(models.Model):
+    reference = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    company = models.ForeignKey(Company, on_delete=models.PROTECT)
+    issuer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    gateway_id = models.CharField(max_length=128)
+    digest = models.CharField(max_length=64, unique=True)
+    scope = models.JSONField()
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True)
+
+
+class DeliveryBinding(models.Model):
+    reference = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    connector_task = models.OneToOneField(ConnectorTask, on_delete=models.PROTECT, related_name="delivery")
+    runtime = models.ForeignKey(ScopedSelectionRuntime, on_delete=models.PROTECT)
+    gateway = models.ForeignKey(GatewayCredential, on_delete=models.PROTECT)
+    selection_id = models.CharField(max_length=128)
+    digest = models.CharField(max_length=64, unique=True)
+    data = models.JSONField()
+    journal = models.JSONField(default=list)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("runtime", "selection_id"), name="delivery_one_selection_binding")]
+
+
+class OperationalControl(models.Model):
+    company = models.OneToOneField(Company, on_delete=models.PROTECT)
+    journal = models.JSONField(default=list)

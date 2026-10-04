@@ -86,6 +86,24 @@ def authenticate(value):
     return credential, member
 
 
+def authenticate_value(credential, member=None):
+    """Recheck an already resolved delegation without retaining its usable token."""
+    credential.refresh_from_db()
+    if credential.revoked_at or timezone.now() >= credential.expires_at:
+        raise PermissionDenied("Connector delivery delegation expired or was revoked.")
+    current = _participant(credential.user)
+    scope = credential.scope
+    if (member_snapshot(current) != scope["member"] or _password_ref(current.user) != scope["password_ref"]
+        or (MFAState.objects.filter(user=current.user).values_list("generation", flat=True).first() or 0) != scope["mfa_generation"]
+        or mfa_required(current) != scope["mfa_required"]
+        or scope["mfa_required"] and not TOTPDevice.objects.filter(user=current.user, confirmed=True).exists()
+        or (scope["company_id"], scope["deployment_id"]) != (str(current.company.company_id), str(current.company.deployment_id))
+        or not set(scope["collection_fields"]).issubset(current.company.collection_fields)):
+        raise PermissionDenied("Connector account/company/MFA/collection scope changed.")
+    _scope(current, scope["repository_ref"], {})
+    return credential, current
+
+
 def revoke(request, reference, password):
     _fresh_password(request, password)
     with transaction.atomic():
@@ -142,6 +160,7 @@ def task_state(link):
             "learning": {"version": ledger.recommendations[0].learning["plan"]["learner_version"],
                          "sha256": ledger.recommendations[0].learning["learner_sha256"]} if ledger.recommendations[0].learning else None,
             "suggestion_context": link.task.suggestion_context,
+            "conditional_task_request": ledger.recommendations[0].task.to_dict(),
             "observed_attempt_models": models, "multiple_models": len(models) > 1, "observation_count": len(rows),
             "gap_count": gaps, "coverage_status": "incomplete" if incomplete else "limited_hook_coverage",
             "actual_execution_verified": False, "usage_verified": False, "outcome_verified": False,
@@ -234,6 +253,12 @@ def observe(credential, member, value):
     state = task_state(link)
     from .selection import monitor_observation
     monitor_observation(member, link, {"payload": payload, "gap_count": state["gap_count"], "multiple_models": state["multiple_models"]})
+    if kind == "close":
+        from .models import DeliveryBinding
+        from .delivery import _finalize
+        binding = DeliveryBinding.objects.filter(connector_task=link).first()
+        if binding:
+            _finalize(binding, binding.gateway)
     return state
 
 
@@ -266,6 +291,22 @@ def check_feedback_task(task, kind, value=None):
     if not link:
         return
     state = task_state(link)
+    from .models import DeliveryBinding
+    from .delivery import state as delivery_state
+    binding = DeliveryBinding.objects.filter(connector_task=link).first()
+    if binding:
+        captured = delivery_state(binding)
+        if kind == "response" and not state["response"] and captured["attempts"]:
+            raise ValidationError("A new response must precede paid delivery attempts; unanswered stays unknown.")
+        if kind == "result" and isinstance(value, dict) and value.get("desired_result") is True:
+            primary = [attempt for attempt in captured["attempts"].values() if captured["requests"][attempt["request_id"]]["kind"] == "primary"]
+            if (not captured["closed"] or captured["unknown_attempts"] or not state["closed"] or state["gap_count"] or state["multiple_models"]
+                or not primary or any(attempt["outcome"] != "completed" or attempt["actual_model"] != binding.data["envelope"]["provider_model"] for attempt in primary)
+                or state["reported_actual_model"] != binding.data["envelope"]["model_id"]):
+                raise ValidationError("Incomplete/failed/wrong-model gateway attribution cannot establish one model's adopted success; preserve negative/unknown results.")
+            # The new gateway path has exact independent request records; an
+            # empty old hook-attempt list is not a missing gateway measurement.
+            return
     if kind == "response" and not state["response"] and link.observations.exclude(payload__observation_kind__in=("gap", "close")).exists():
         raise ValidationError("A new response must precede observed model activity; unanswered remains unknown.")
     if kind == "result":

@@ -49,6 +49,11 @@ def detail(request, reference):
     if link:
         context["connector_state"] = task_state(link)
         context["connector_observations"] = list(link.observations.all())
+        from .models import DeliveryBinding
+        from .operations import delivery_summary
+        binding = DeliveryBinding.objects.filter(connector_task=link).first()
+        if binding:
+            context["delivery_state"] = delivery_summary(binding)
     return render(request, "company/task_detail.html", context)
 
 

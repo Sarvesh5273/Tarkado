@@ -44,6 +44,8 @@ def _participant(user):
 
 
 def _scope(member, repository_ref, values):
+    from .operations import require_collection_open
+    require_collection_open(member.company)
     if not member.company.company_api_attested or repository_ref not in member.company.repository_refs:
         raise PermissionDenied("Repository or API collection permission is no longer approved.")
     allowed = set(member.company.collection_fields)

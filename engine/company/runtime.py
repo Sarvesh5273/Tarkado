@@ -88,6 +88,8 @@ def configure(directory, create=False, deployment=None):
         TARKADO_SERVICE_MODE="loopback_development",
         TARKADO_READINESS_VERIFIER=None,
         TARKADO_ADMISSION_VERIFIER=None,
+        TARKADO_DELIVERY_VERIFIER=None,
+        TARKADO_BILLING_VERIFIER=None,
     )
     options.update(secure)
     settings.configure(**options)

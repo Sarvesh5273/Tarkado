@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.mjs",
     "./tui": "./src/tui.tsx",
-    "./rpc": "./src/rpc.mjs"
+    "./rpc": "./src/rpc.mjs",
+    "./delivery": "./src/delivery-index.mjs",
+    "./delivery-rpc": "./src/delivery-rpc.mjs"
   },
   "scripts": {"test": "node --test test/*.test.mjs"}
 }

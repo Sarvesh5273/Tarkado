@@ -1,0 +1,4 @@
+{% extends 'company/base.html' %}{% block content %}
+<h1>Private gateway credential — shown once</h1><p>Deliver privately to the authorized gateway operator, outside Git/chat/screenshots. This is a Tarkado machine credential, not an OpenAI API key or pilot approval.</p>
+<pre id="gateway-credential">{{ machine_value }}</pre><p>Gateway reference {{ gateway.reference }}. Expiry {{ gateway.expires_at|date:'c' }}. Only its digest is retained.</p><a href="{% url 'company-gateways' %}">Back to gateway identities</a>
+{% endblock %}

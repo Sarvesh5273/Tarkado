@@ -11,10 +11,11 @@
 {% if request.company_member.participating or request.company_member.can_manage_company %}<a href="{% url 'company-connectors' %}">OpenCode connector</a>{% endif %}
 {% if request.company_member.can_approve_pilots or request.company_member.can_manage_company %}<a href="{% url 'company-pilots' %}">Evidence &amp; pilots</a>{% endif %}
 {% if request.company_member.can_approve_pilots or request.company_member.can_manage_company %}<a href="{% url 'company-learning' %}">Learning</a>{% endif %}
+{% if request.company_member.can_approve_pilots or request.company_member.can_manage_company %}<a href="{% url 'company-monitoring' %}">Monitoring</a>{% endif %}
 {% if request.company_member.can_manage_company %}<a href="{% url 'company-members' %}">Accounts</a><a href="{% url 'company-invitations' %}">Invitations</a><a href="{% url 'company-configuration' %}">Policy &amp; collection</a><a href="{% url 'company-history' %}">History</a>{% endif %}
 {% elif not request.user.is_authenticated %}<a href="{% url 'company-login' %}">Login</a><a href="{% url 'company-join' %}">Join by invitation</a>{% endif %}</nav>
 {% if request.user.is_authenticated %}<div class="account"><span>Signed in as {{ request.user.username }}</span><a href="{% url 'company-mfa-setup' %}">Authenticator settings</a><a href="{% url 'company-recovery-personal' %}">Password recovery credential</a><form method="post" action="{% url 'company-logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form></div>{% else %}<p><a href="{% url 'company-password-reset' %}">Forgot password? Use private recovery</a></p>{% endif %}</header>
-<p class="notice">Manual shadow workflow — you choose models. This build does not collect live tasks or send model requests. No private session access. Reported outcomes remain unverified. Separate live scope approval requires independent server verification and is not execution or deployment permission.</p>
+<p class="notice">Manual shadow by default — you choose models; no extra alternative requests. The default installation does not collect live tasks or send model requests. Delivery is unconfigured in shipped launchers and requires a separately approved/validated existing-tool adapter. Reported outcomes remain unverified. Separate live scope approval is not execution or deployment permission.</p>
 <main id="main" tabindex="-1">{% block content %}{% endblock %}</main>
 <footer>Private company records · Metadata only · Retention is manual, not automatic.</footer>
 </body></html>
