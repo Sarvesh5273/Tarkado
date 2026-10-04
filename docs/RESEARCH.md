@@ -1,14 +1,19 @@
 # Research and Market Context
 
 This document records the evidence behind the product direction. It is not a
-claim that Lanesmith is the first router.
+claim that Tarkado is the first router.
+
+The company workflow accepted by the owner is in [WORKFLOW.md](WORKFLOW.md).
+It is a product decision, not proof that senior-prioritized feedback learning
+improves model choice. That benefit still needs validation against simple
+baselines and actual engineering outcomes.
 
 ## 1. Existing infrastructure: do not rebuild it
 
 ### LiteLLM
 
 LiteLLM already provides an OpenAI-compatible proxy, virtual keys, spend
-tracking, budgets, fallbacks, routing, and logging. Lanesmith should integrate
+tracking, budgets, fallbacks, routing, and logging. Tarkado should integrate
 with this type of gateway rather than recreate it.
 
 - [LiteLLM routing](https://docs.litellm.ai/docs/routing)
@@ -74,13 +79,13 @@ benchmark chart.
   extraction in the stated Pro terms.
   [OpenAI Pro terms](https://help.openai.com/en/articles/9793128-about-chatgpt-pro-tiers)
 
-Therefore Lanesmith assumes company-owned API/gateway credentials for any
+Therefore Tarkado assumes company-owned API/gateway credentials for any
 shared routing or budget enforcement.
 
 ## 5. Evaluation data reality
 
 Small companies may have raw task traces but not curated labelled evaluation
-sets. Lanesmith must distinguish these conditions instead of assuming “50
+sets. Tarkado must distinguish these conditions instead of assuming “50
 prompts” means enough evidence.
 
 - [LangSmith evaluation docs](https://docs.langchain.com/langsmith/evaluation)
@@ -96,3 +101,9 @@ No usable evaluation cases → help create/collect cases; do not claim routing c
 Some cases             → observe and shadow-test only.
 Sufficient evidence    → recommend a limited pilot.
 ```
+
+Under the accepted workflow, the designated senior/admin must authorize that
+first pilot separately. One senior's task acceptance or a ready-for-review
+report does not enable automatic company routing. Recommendation-only shadow
+mode makes no extra alternative-model calls; learn only from actual recorded
+use/results rather than inventing unused models' outcomes.

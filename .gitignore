@@ -7,6 +7,10 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+build/
+dist/
+*.egg-info/
+node_modules/
 
 # Secrets and local configuration
 .env
@@ -15,6 +19,7 @@ htmlcov/
 *.pem
 *.key
 secrets/
+.secret-key
 
 # Sensitive/local data and generated artifacts
 data/
@@ -22,7 +27,13 @@ traces/
 artifacts/
 outputs/
 logs/
+local/
+*.jsonl
+*.csv
+!tests/fixtures/synthetic.jsonl
+!tests/fixtures/rollout.jsonl
 *.sqlite
+*.sqlite3
 *.db
 
 # Editor and operating-system files
