@@ -237,3 +237,25 @@ reviewed observations, revoked/expired authority and budget limits still block.
 Other feedback/current-task record types get no blanket exception. Paused pilots
 are not automatically resumed. This implements W-03/W-04/W-07/W-08; it does not
 change them or approve installation, private sessions, real calls or public push.
+
+## Bounded local-function coding contract — implementation 2026-10-04
+
+Continuing the owner-requested build, extend the accepted existing-tool/gateway
+path with a separate versioned contract for independently reviewed **client-owned
+local functions**, not unrestricted tool execution or a new test runner. Tool
+definitions map exactly to declared read/edit/test capabilities and remain subject
+to approved model/task scope and the original fixed-model binding.
+
+Reserve before every model request, including every continuation after tool
+results, using the full reviewed billable-input ceiling plus output/reasoning and
+reviewed fixed charges. Function definitions/results/arguments are not assumed free
+tokens. A real verifier must additionally establish that the local execution path
+cannot spawn hidden model/subagent/API charges; names/hashes or an evidence label
+alone do not establish it. Shipped verifiers remain unconfigured/refusing.
+
+Preserve the legacy text-only envelope and schema-1 handoff; new function envelopes
+use schema 2. Refuse hosted tools, unrestricted shell, remote/paid/MCP tools,
+subagents, unknown cost and non-text billing paths. Existing OpenCode owns local
+permissions/tool execution. Tests use an isolated controlled tool/provider fixture;
+no actual host/tool safety, billing, quality, installation or provider call is
+authorized or claimed. Acceptance remains preference, not outcome/pilot approval.

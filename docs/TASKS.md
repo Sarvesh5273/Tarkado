@@ -50,6 +50,41 @@ assertion was weakened; no installation, private session/store access, real
 provider call, automatic retraining or public push occurred. Tool-coding support
 and installed-host/provider validation remain separate, unfinished work.
 
+### Bounded local-function coding support — 2026-10-04
+
+Baseline before edits: **757 Python / 33 JavaScript tests pass**. Inspected the
+tool-required binding and function/tool-result refusals, then consulted primary
+OpenAI token/function docs, LiteLLM and official OpenCode V2 documentation.
+
+- [x] Add envelope v2 for exact local function definitions/capabilities and
+  independently reviewed local execution; preserve legacy text-only contracts.
+- [x] Join declared tool capabilities, current authority, task/model binding,
+  guided terminal filtering and post-tool continuations to shared attempt budgets.
+- [x] Exercise the actual adapter with controlled provider tool-call responses,
+  isolated file read/edit/unit tests, adverse cases and metadata privacy.
+- [x] Document schema-2 handoff, narrow support and separate missing/validation work.
+- [ ] Make a separate logical local commit; no public push.
+
+No new coding tool runner or generic gateway. Existing OpenCode owns reviewed
+local tool execution/permissions; every model continuation still uses the bound
+model and needs a fresh conservative reservation. Function definitions, arguments,
+source and results stay transient in the authorized client/gateway; Tarkado retains
+only approved capability references and usage/accounting metadata.
+
+**Verification:** **774 Python / 38 JavaScript tests pass** (757 Python / 33 JS
+baseline retained + 17 Python / five JS cases); `git diff --check` passes. No old
+assertion was changed. Python also invokes JS, so these are not independent
+certifications. A controlled read/edit/test loop spends supplied `0.008` USD across
+four separately reserved attempts, not real provider prices or quality evidence.
+
+Hosted/remote/paid tools, unrestricted shell, subagents, non-text/extra billing,
+automatic tool-outcome/failure attribution and broader tool safety remain missing
+software scope. A safe already-existing test function and independent real
+verifier evidence are required; the fixture's `run_tests` is not an installed
+OpenCode tool. Actual host/tool/pricing/invoice/quality and deployment validation
+remain separately deferred. See [FUNCTION_CODING.md](FUNCTION_CODING.md). No installs,
+plugin loading, private-session/store access, real provider calls or push occurred.
+
 ### Remaining build packages, in execution order
 
 | ID | Build package | Required result | Dependency / boundary |

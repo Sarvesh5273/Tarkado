@@ -29,7 +29,7 @@ export class DeliveryCoordinator {
     const adapter = new FreshSessionDeliveryAdapter({ ...this.options, outputLimit: input.outputLimit })
     const linked = await this.company.call("start", { client_task_id: clientTaskID, session_ref: adapter.pendingSessionReference(),
       location_sha256: this.location, task_label: input.taskLabel, task_type: input.taskType, risk_tags: input.riskTags,
-      selected_model: input.selectedModel, required_tools: [], context_tokens: input.contextTokens, boundary: "new_task" })
+      selected_model: input.selectedModel, required_tools: input.requiredTools ?? [], context_tokens: input.contextTokens, boundary: "new_task" })
     this.links.set(adapter.pendingSessionReference(), linked.connector_task_ref)
     const request = { selection_id: randomUUID(), task: linked.conditional_task_request,
       repository_ref: input.repositoryRef, boundary: "new_task", reserve_usd: input.taskCapUSD, override_model: input.overrideModel ?? null }

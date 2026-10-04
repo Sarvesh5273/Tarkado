@@ -9,6 +9,12 @@ narrow terminal/startup **software wiring**, not normal tool-coding support,
 independent company readiness or real host/provider validation. No existing private
 installation or credential/configuration was inspected, upgraded or reset.
 
+**Tool-path update:** explicit local-function read/edit/test capabilities can now be
+selected when an independently reviewed function envelope exists. The constrained
+contract and safe existing test-tool requirements are in
+[FUNCTION_CODING.md](FUNCTION_CODING.md). No unrestricted shell, remote/paid tools,
+automatic tool-outcome capture or actual host validation is added.
+
 ## What the new terminal source does
 
 The separate private package at `integrations/opencode/delivery/` exports a server

@@ -59,6 +59,15 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
       const scope = scopes.find(row => row.scope_ref === scopeRef)
       const taskType = await context.ui.dialog.select({ title: "Explicit supported task category", options: scope.routes.map(row => ({ title: `${row.task_type} → ${row.model}`, value: row.task_type })) })
       if (taskType === undefined) return
+      const route = scope.routes.find(row => row.task_type === taskType)
+      const capabilities = [...new Set((route.local_tools ?? []).map(tool => tool.capability))]
+      let requiredTools = []
+      if (capabilities.length) {
+        const required = await context.ui.dialog.prompt({ title: `Required reviewed local capabilities (${capabilities.join(", ")}; comma separated, blank = text only)` })
+        if (required === undefined) return
+        requiredTools = required.split(",").map(value => value.trim()).filter(Boolean)
+        if (new Set(requiredTools).size !== requiredTools.length || requiredTools.some(value => !capabilities.includes(value))) throw new Error("Tool capabilities are outside the reviewed local function envelope.")
+      }
       const taskLabel = await context.ui.dialog.prompt({ title: "New task label — metadata only", placeholder: "No code, prompts, outputs or secrets" })
       if (!taskLabel) return
       const selectedModel = await context.ui.dialog.select({ title: "Original manual model choice (policy ID, explicitly reported)", options: configuration.models.map(value => ({ title: value, value })) })
@@ -66,7 +75,7 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
       const override = await context.ui.dialog.select({ title: "Developer override for this NEW task only", options: [{ title: "Use the reviewed category route", value: "" },
         ...configuration.models.map(value => ({ title: value, value }))] })
       if (override === undefined) return
-      const risk = await context.ui.dialog.confirm({ title: "Confirm justified low-risk, text-only task", message: "Only the evidenced low-risk category is supported. Normal tool-using coding requests are not supported yet. This cannot expand company scope.", label: { confirm: "This task fits", cancel: "Cancel" } })
+      const risk = await context.ui.dialog.confirm({ title: "Confirm justified low-risk, bounded task", message: "Only the evidenced category and explicitly reviewed local read/edit/test tools are supported. Unknown tool charges, unrestricted shell, subagents and remote/paid tools are refused. OpenCode permissions still apply. This cannot expand company scope.", label: { confirm: "This task fits", cancel: "Cancel" } })
       if (!risk) return
       const contextText = await context.ui.dialog.prompt({ title: "Required context tokens — explicit requirement, never guess" })
       const outputText = await context.ui.dialog.prompt({ title: "Maximum output/reasoning tokens per request — explicit bound" })
@@ -76,11 +85,11 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
       if (!Number.isSafeInteger(contextTokens) || contextTokens < 1 || !Number.isSafeInteger(outputLimit) || outputLimit < 1
         || !/^\d+(\.\d+)?$/.test(capText) || !/[1-9]/.test(capText)) throw new Error("Unknown/invalid requirements cannot authorize delivery.")
       const confirmed = await context.ui.dialog.confirm({ title: "Create one NEW isolated delivery session — no prompt", message:
-        `Repository: ${configuration.repository_ref}\nPilot: ${scope.pilot_id}\nTask: ${taskLabel}\nCategory: ${taskType}\nOriginal manual choice: ${selectedModel}\nOverride: ${override || "none"}\nTask cap USD: ${capText}\nRequest output limit: ${outputLimit}\nCurrent work/model stays unchanged. No model runs here.`, label: { confirm: "Create new session", cancel: "Cancel" } })
+        `Repository: ${configuration.repository_ref}\nPilot: ${scope.pilot_id}\nTask: ${taskLabel}\nCategory: ${taskType}\nRequired local capabilities: ${requiredTools.join(", ") || "none (text only)"}\nOriginal manual choice: ${selectedModel}\nOverride: ${override || "none"}\nTask cap USD: ${capText}\nRequest output limit: ${outputLimit}\nCurrent work/model stays unchanged. No model runs here.`, label: { confirm: "Create new session", cancel: "Cancel" } })
       if (!confirmed) return
       sameContext(original)
       const result = await rpc.start({ scopeRef, repositoryRef: configuration.repository_ref, taskLabel, taskType, riskTags: ["low"],
-        selectedModel, overrideModel: override || null, contextTokens, outputLimit, taskCapUSD: capText, clientTaskID: randomUUID() }, { location: original.location })
+        selectedModel, overrideModel: override || null, contextTokens, outputLimit, taskCapUSD: capText, clientTaskID: randomUUID(), requiredTools }, { location: original.location })
       if (!result.sessionCreated || result.executionSent !== false) throw new Error("No exact newly created bound session was returned.")
       // Navigate ONLY to the new root; never mutate/switch an unrelated active session.
       sameContext(original)

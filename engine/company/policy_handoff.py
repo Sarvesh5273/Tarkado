@@ -21,12 +21,14 @@ COMPATIBILITY = {"opencode_source_version": "2.0.21", "litellm_candidate_version
                  "protocol": "text-chat-completions-v1", "boundary": "explicit-fresh-root-session",
                  "model_switching": False, "client_streaming": "buffered-from-one-nonstream-provider-response",
                  "provider_streaming": False, "tools": False, "installed_host_validation": "separately_required"}
+FUNCTION_COMPATIBILITY = {**COMPATIBILITY, "protocol": "bounded-local-function-chat-v2", "tools": "reviewed_client_owned_functions",
+                          "hosted_tools": False, "unrestricted_shell": False}
 
 
 def validate(value):
     object_fields(value, FIELDS, FIELDS)
     ensure_safe(value)
-    if type(value["schema_version"]) is not int or value["schema_version"] != 1 or value["kind"] != "tarkado_existing_gateway_policy" or value["reference_path"] != REFERENCE:
+    if type(value["schema_version"]) is not int or value["schema_version"] not in (1, 2) or value["kind"] != "tarkado_existing_gateway_policy" or value["reference_path"] != REFERENCE:
         raise ValidationError("Unsupported versioned gateway policy handoff.")
     if value["execution_credential"] is not False or value["portable_live_approval"] is not False or value["routing_enabled"] is not False:
         raise ValidationError("A policy handoff cannot contain portable live authority or execution permission.")
@@ -43,7 +45,8 @@ def validate(value):
     scope = PilotScope.from_dict(value["scope"])
     if not isinstance(value["scope"]["max_cost_usd"], str):
         raise ValidationError("Policy handoff cost limit must be an exact decimal string.")
-    if policy.fingerprint() != value["policy_sha256"] or learner.policy.sha256 != value["policy_sha256"] or _fingerprint(learner.to_dict()) != value["learner_content_sha256"] or value["compatibility"] != COMPATIBILITY:
+    compatibility = FUNCTION_COMPATIBILITY if value["schema_version"] == 2 else COMPATIBILITY
+    if policy.fingerprint() != value["policy_sha256"] or learner.policy.sha256 != value["policy_sha256"] or _fingerprint(learner.to_dict()) != value["learner_content_sha256"] or value["compatibility"] != compatibility:
         raise ValidationError("Exact policy/learner/runtime contract differs from this handoff.")
     if len(scope.pilot_id) > 128 or any(marker in scope.repository_ref for marker in ("*", "?", "[", "]")):
         raise ValidationError("Policy handoff needs a bounded pilot ID and an explicit repository scope.")
@@ -67,7 +70,7 @@ def validate(value):
         or sum(item["suggestions"] for item in learner.evidence) > counts["recommendations"]
         or sum(item["accepts"] + item["rejects"] for item in learner.evidence) > counts["responses"]):
         raise ValidationError("Learner aggregate evidence contradicts its training coverage counts.")
-    from engine.delivery_contract import TextChatEnvelope
+    from engine.delivery_contract import LocalFunctionChatEnvelope, delivery_envelope
     if not isinstance(value["model_bindings"], list):
         raise ValidationError("Model bindings must be a metadata array.")
     for row in value["model_bindings"]:
@@ -77,10 +80,12 @@ def validate(value):
     aliases = set()
     for row in value["model_bindings"]:
         if row["envelope"] is not None:
-            envelope = TextChatEnvelope.from_dict(row["envelope"])
+            envelope = delivery_envelope(row["envelope"])
             if envelope.model_id != row["model_id"] or envelope.gateway_model in aliases:
                 raise ValidationError("Gateway aliases must bind exactly one policy model.")
             aliases.add(envelope.gateway_model)
+            if isinstance(envelope, LocalFunctionChatEnvelope) and (value["schema_version"] != 2 or set(tool.capability for tool in envelope.local_tools) - set(policy.model(row["model_id"]).tools)):
+                raise ValidationError("Local-function handoff exceeds its version or saved model capabilities.")
     if not isinstance(value["unsupported"], list):
         raise ValidationError("Unsupported handoff paths must be a metadata array.")
     unbound = {row["model_id"] for row in value["model_bindings"] if row["envelope"] is None}
@@ -141,11 +146,12 @@ def build(request, scope_ref):
             unsupported.append({"model_id": None, "reason": "No active conditional runtime. Export cannot activate or resume one."})
     else:
         unsupported.append({"model_id": None, "reason": "This is a simulation-pilot handoff, not a live approval. Even an active simulation cannot authorize gateway delivery."})
-    value = {"schema_version": 1, "kind": "tarkado_existing_gateway_policy", "reference_path": REFERENCE,
+    functions = any(row["envelope"] is not None and row["envelope"].get("schema_version") == 2 for row in bindings)
+    value = {"schema_version": 2 if functions else 1, "kind": "tarkado_existing_gateway_policy", "reference_path": REFERENCE,
              "company_id": str(member.company.company_id), "deployment_id": str(member.company.deployment_id),
              "company_revision": member.company.revision, "scope_ref": str(approval.reference), "scope": scope,
              "policy": policy.to_dict(), "policy_sha256": policy.fingerprint(), "learner": learner,
-             "learner_content_sha256": _fingerprint(learner), "model_bindings": bindings, "compatibility": dict(COMPATIBILITY),
+             "learner_content_sha256": _fingerprint(learner), "model_bindings": bindings, "compatibility": dict(FUNCTION_COMPATIBILITY if functions else COMPATIBILITY),
              "unsupported": unsupported, "execution_credential": False, "portable_live_approval": False, "routing_enabled": False}
     value["sha256"] = _fingerprint(value)
     return validate(value)

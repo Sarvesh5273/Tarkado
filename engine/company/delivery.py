@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
-from engine.delivery_contract import REQUEST_KINDS, TextChatEnvelope
+from engine.delivery_contract import REQUEST_KINDS, TextChatEnvelope, LocalFunctionChatEnvelope, bind_tools, delivery_envelope
 from engine.feedback import _fingerprint, _timestamp
 from engine.pilot import _money_total
 from engine.schemas import ValidationError, boolean, choice, integer, number, object_fields, text
@@ -32,6 +32,10 @@ class DeliveryVerifier(ABC):
     lowering, logging, credentials, ceilings/prices/extra charges and bypass paths
     need validation before returning an envelope. Both launchers leave it unset.
     This is separate from company evidence readiness and human pilot approval.
+    A local-function envelope additionally requires exact definition/capability
+    validation and an independently enforced client-tool boundary: no extra model
+    calls, hosted charges, network/subagent inference or unbounded shell side effects.
+    Function names or hashes alone cannot establish that boundary.
     """
 
     @abstractmethod
@@ -81,11 +85,10 @@ class NarrowDeliveryAdmissionVerifier(AdmissionVerifier):
             raise ValidationError("Only one exact unused explicit fresh-task descriptor is supported.")
         link = matching[0]
         _, member = connectors.authenticate_value(link.credential)
-        envelope = envelope_for(company, request.model_id)
+        envelope = bind_tools(envelope_for(company, request.model_id), request.selection_request["task"]["required_tools"])
         if (request.selection_request["repository_ref"] != link.task.repository_ref
-            or request.selection_request["task"]["developer_id"] != member.developer_id
-            or request.selection_request["task"]["required_tools"]):
-            raise ValidationError("Task owner/repository/text-only capability differs from this delivery descriptor.")
+            or request.selection_request["task"]["developer_id"] != member.developer_id):
+            raise ValidationError("Task owner/repository capability differs from this delivery descriptor.")
         from .models import PilotAuthorization
         approval = PilotAuthorization.objects.filter(company=company, data__sha256=request.scope_record_sha256).first()
         if approval is None or live_guard(approval, company, allow_future_recommendations=True)["status"] != "current":
@@ -94,7 +97,8 @@ class NarrowDeliveryAdmissionVerifier(AdmissionVerifier):
         # rechecks current credentials, host envelope, and separate live authority.
         verified = max(link.task.events.first().timestamp, _timestamp(envelope.verified_at))
         expires = min(link.credential.expires_at, _timestamp(envelope.valid_until))
-        return AdmissionAssessment("tarkado-litellm-text-v1:" + envelope.sha256, "connector-task:" + str(link.reference), request.sha256,
+        adapter = "tarkado-litellm-functions-v2:" if isinstance(envelope, LocalFunctionChatEnvelope) else "tarkado-litellm-text-v1:"
+        return AdmissionAssessment(adapter + envelope.sha256, "connector-task:" + str(link.reference), request.sha256,
             verified.isoformat(), expires.isoformat(), True, True, True, True, True)
 
 
@@ -183,18 +187,20 @@ def bind(credential, member, link, scope_ref, selection_id, gateway_ref):
     gateway_user = gateway.scope["user_mapping"].get(member.developer_id)
     if not gateway_user:
         raise PermissionDenied("Administrator has not mapped this developer to a gateway-authenticated user.")
-    envelope = envelope_for(member.company, row["model"])
-    if row["request"]["task"]["required_tools"]:
-        raise ValidationError("The first reviewed envelope is text-only; tool-required task delivery is unsupported.")
+    envelope = bind_tools(envelope_for(member.company, row["model"]), row["request"]["task"]["required_tools"])
     value = secrets.token_urlsafe(32)
     data = {"schema_version": 1, "company_id": str(member.company.company_id), "deployment_id": str(member.company.deployment_id),
             "selection_sha256": _fingerprint(row), "session_ref": link.session_ref, "gateway_user_ref": gateway_user,
             "owner": member_snapshot(member), "envelope": envelope.to_dict(), "task_cap_usd": row["reserve_usd"]}
     binding = DeliveryBinding.objects.create(connector_task=link, runtime=runtime, gateway=gateway, selection_id=selection_id,
         digest=connectors.digest(value), data=data)
-    return {"binding_ref": str(binding.reference), "task_token": value, "model": envelope.model_id,
+    result = {"binding_ref": str(binding.reference), "task_token": value, "model": envelope.model_id,
             "gateway_model": envelope.gateway_model, "provider_model": envelope.provider_model, "session_ref": link.session_ref,
             "task_cap_usd": row["reserve_usd"], "envelope_sha256": envelope.sha256, "execution_sent": False}
+    if isinstance(envelope, LocalFunctionChatEnvelope):
+        result["local_tools"] = [tool.to_dict() for tool in envelope.local_tools]
+        result["local_execution_evidence_ref"] = envelope.local_execution_evidence_ref
+    return result
 
 
 def _binding(gateway, reference):
@@ -223,7 +229,7 @@ def _current(gateway, binding, task_token, session_ref, retry_request_id=None):
     if (selected_state["status"] != "active" or binding.selection_id in selected_state["settlements"] or binding.connector_task.closed_at
         or live_guard(runtime.authorization, gateway.company, allow_future_recommendations=True, delivery_retry_ref=retry_ref)["status"] != "current"):
         raise ValidationError("Delivery is paused, withdrawn, closed, settled, or stale; never switch its model.")
-    envelope = envelope_for(gateway.company, row["model"])
+    envelope = bind_tools(envelope_for(gateway.company, row["model"]), row["request"]["task"]["required_tools"])
     if envelope.to_dict() != binding.data["envelope"]:
         raise ValidationError("Host/pricing/model envelope changed; no mid-task rebinding.")
     if any(row["outcome"] == "unknown" for row in state(binding)["attempts"].values()):
@@ -237,7 +243,7 @@ def state(binding, until=None):
     object_fields(data, fields, fields)
     if type(data["schema_version"]) is not int or data["schema_version"] != 1 or data["company_id"] != str(binding.gateway.company.company_id) or data["deployment_id"] != str(binding.gateway.company.deployment_id):
         raise ValidationError("Delivery history company/deployment binding differs.")
-    envelope = TextChatEnvelope.from_dict(data["envelope"])
+    envelope = delivery_envelope(data["envelope"])
     cap = number(data["task_cap_usd"], "task_cap_usd")
     selected = next((event["payload"] for event in binding.runtime.journal["events"] if event["action"] == "select" and event["payload"]["selection_id"] == binding.selection_id), None)
     if (selected is None or _fingerprint(selected) != data["selection_sha256"] or selected["connector_task_ref"] != str(binding.connector_task.reference)
@@ -386,7 +392,7 @@ def settle_attempt(gateway_token, binding_ref, attempt_id, cost_usd, usage, outc
         raise ValidationError("Actual cost must be an exact decimal string, never a float.")
     if any(event["action"] == "settle" and {k: v for k, v in event["payload"].items() if k != "billing_assessment"} == payload for event in binding.journal):
         return before
-    envelope = TextChatEnvelope.from_dict(binding.data["envelope"])
+    envelope = delivery_envelope(binding.data["envelope"])
     payload["billing_assessment"] = None
     if cost_usd is not None and not (usage is not None and actual_model == envelope.provider_model and number(cost_usd, "cost_usd") == envelope.cost(usage)):
         from .billing_gate import verify, reconciliation_request

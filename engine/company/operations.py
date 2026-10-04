@@ -74,12 +74,16 @@ def delivery_summary(binding):
     from .delivery import state
     current = state(binding)
     envelope = binding.data["envelope"]
-    return {"binding_ref": str(binding.reference), "policy_model": envelope["model_id"], "gateway_model": envelope["gateway_model"],
+    result = {"binding_ref": str(binding.reference), "policy_model": envelope["model_id"], "gateway_model": envelope["gateway_model"],
             "provider_model": envelope["provider_model"], "task_cap_usd": binding.data["task_cap_usd"],
             "known_cost_usd": current["known_cost_usd"], "unknown_attempts": current["unknown_attempts"],
             "attempt_reserved_usd": current["attempt_reserved_usd"], "remaining_task_usd": current["remaining_task_usd"],
             "closed": current["closed"], "requests": list(current["requests"].values()), "attempts": list(current["attempts"].values()),
             "usage_source": "authenticated_gateway_metadata", "provider_invoice_verified": False, "engineering_outcome_verified": False}
+    if envelope.get("schema_version") == 2:
+        result["local_tools"] = envelope["local_tools"]
+        result["local_execution_evidence_ref"] = envelope["local_execution_evidence_ref"]
+    return result
 
 
 @transaction.atomic

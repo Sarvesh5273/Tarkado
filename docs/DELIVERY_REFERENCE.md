@@ -10,6 +10,12 @@ performed. See [DELIVERY_STARTUP.md](DELIVERY_STARTUP.md), which supersedes the
 earlier terminal/startup missing-software notes below. Normal tool-coding support,
 continuous pilot-feedback handling and real verification remain incomplete.
 
+**Local-function coding follow-up:** a separate envelope/handoff schema 2 now supports
+explicitly reviewed client-owned local function tools and budgeted post-tool model
+continuations. Legacy text-only contracts remain unchanged. See
+[FUNCTION_CODING.md](FUNCTION_CODING.md), which supersedes text-only-only scope below
+without claiming unrestricted shell, hosted tools or installed-host/tool validation.
+
 The narrow adapter is now real application/source code, exercised with controlled
 provider responses and a loopback fake-provider HTTP server. **It is not installed
 or authorized for real generation.** Company evidence, host compatibility, actual

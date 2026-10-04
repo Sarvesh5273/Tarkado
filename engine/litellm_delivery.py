@@ -14,7 +14,7 @@ from importlib.metadata import version
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from engine.delivery_contract import TextChatEnvelope, chat_request, chat_usage
+from engine.delivery_contract import delivery_envelope, chat_request, chat_usage
 from engine.importers import parse_json
 from engine.schemas import ValidationError, object_fields
 from engine.privacy import PrivacyError, ensure_safe
@@ -73,7 +73,7 @@ class AttemptHooks:
             raise ValidationError("LiteLLM must supply its authenticated mapped user, not a request user/header label.")
         context = {"binding_ref": metadata["tarkado_binding"], "task_token": metadata["tarkado_task"],
                    "session_ref": metadata["tarkado_session"], "gateway_user_ref": user_ref}
-        envelope = TextChatEnvelope.from_dict(self.backend.call("describe", context)["envelope"])
+        envelope = delivery_envelope(self.backend.call("describe", context)["envelope"])
         # The pinned proxy adds transport/tracing metadata before call hooks.
         # These do not become provider settings or enter company records.
         runtime_keys = ("proxy_server_request", "litellm_call_id", "litellm_trace_id", "litellm_session_id")
@@ -91,7 +91,7 @@ class AttemptHooks:
 
     def pre_attempt(self, kwargs):
         context = self._context(kwargs)
-        envelope = TextChatEnvelope.from_dict(context["envelope"])
+        envelope = delivery_envelope(context["envelope"])
         shape = chat_request(kwargs, envelope, physical=True)
         if kwargs.get("api_base") not in (None, "https://api.openai.com/v1") or kwargs.get("custom_llm_provider") not in (None, "openai"):
             raise ValidationError("Unapproved provider endpoint/transport differs from the OpenAI binding.")
@@ -129,7 +129,7 @@ class AttemptHooks:
         if "attempt_id" not in context:
             # Pre-admission refusal never creates a free or chargeable fake attempt.
             return
-        envelope = TextChatEnvelope.from_dict(context["envelope"])
+        envelope = delivery_envelope(context["envelope"])
         usage = None
         model = response.get("model") if isinstance(response, dict) else getattr(response, "model", None)
         try:
@@ -154,7 +154,7 @@ class AttemptHooks:
 
     async def stream(self, kwargs, response):
         final, exhausted = None, False
-        envelope = TextChatEnvelope.from_dict(self._context(kwargs)["envelope"])
+        envelope = delivery_envelope(self._context(kwargs)["envelope"])
         wrong_model = False
         try:
             async for chunk in response:

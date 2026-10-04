@@ -416,6 +416,12 @@ company-verifier and existing-LiteLLM callback startup. No plugin/callback was
 loaded on the installed host. Tool-coding support and real validation remain
 unfinished. See [DELIVERY_STARTUP.md](docs/DELIVERY_STARTUP.md).
 
+**Bounded local-function coding:** versioned exact tool contracts now support
+approved local read/edit/test function requests and separately reserved post-tool
+model continuations. This remains conditional on an independently reviewed existing
+client tool boundary; unrestricted shell/hosted tools and real host/provider
+validation are not supplied. See [FUNCTION_CODING.md](docs/FUNCTION_CODING.md).
+
 Run the tests:
 
 ```sh
@@ -501,6 +507,7 @@ confirmation, usage, metadata limitations, and mock-test coverage.
 | [INTEGRATED_LEARNING_SELECTION.md](docs/INTEGRATED_LEARNING_SELECTION.md) | B-05 learner publication/future manual guidance, conditional selection accounting, default-denying admission, and missing live-delivery adapter. |
 | [DELIVERY_REFERENCE.md](docs/DELIVERY_REFERENCE.md) | Narrow reference delivery, reservations/unknown settlement, monitoring/privacy, stable handoff and explicit remaining software/validation. |
 | [DELIVERY_STARTUP.md](docs/DELIVERY_STARTUP.md) | Guided inactive terminal delivery source and explicit reviewed company/LiteLLM startup wiring; no performed installation. |
+| [FUNCTION_CODING.md](docs/FUNCTION_CODING.md) | Bounded local-function tool contracts and shared continuation budgets; constrained scope and separate host/tool validation. |
 | [DECISIONS.md](docs/DECISIONS.md) | Decisions, assumptions, and unresolved choices. |
 | [RESEARCH.md](docs/RESEARCH.md) | Market and research evidence. |
 | [AGENTS.md](AGENTS.md) | Engineering rules for implementation work. |

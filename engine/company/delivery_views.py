@@ -46,8 +46,10 @@ def options(credential, member, value):
                     envelope = delivery.envelope_for(member.company, route["model"])
                 except ValidationError:
                     continue
+                from engine.delivery_contract import LocalFunctionChatEnvelope
+                tools = [tool.to_dict() for tool in envelope.local_tools] if isinstance(envelope, LocalFunctionChatEnvelope) else []
                 routes.append({"task_type": route["task_type"], "model": route["model"], "output_token_ceiling": envelope.output_token_ceiling,
-                               "minimum_attempt_reserve_usd": str(envelope.maximum(1))})
+                               "minimum_attempt_reserve_usd": str(envelope.maximum(1)), "local_tools": tools})
             scopes.append({"scope_ref": str(approval.reference), "pilot_id": scope["pilot_id"], "status": current["status"],
                 "authority_current": guard["status"] == "current", "routes": routes, "accounting": selection.accounting(runtime, current)})
     gateways = []
@@ -108,10 +110,11 @@ def preflight(credential, member, value):
         or live_guard(runtime.authorization, member.company, allow_future_recommendations=True)["status"] != "current"):
         raise ValidationError("No current independently approved unused task boundary is available.")
     route = next((row for row in runtime.authorization.data["routes"] if row["task_type"] == task.task_type), None)
-    if route is None or task.required_tools:
-        raise ValidationError("This task has no supported text-only delivery route.")
+    if route is None:
+        raise ValidationError("This task has no supported delivery route.")
     model = request["override_model"] or route["model"]
-    delivery.envelope_for(member.company, model)
+    from engine.delivery_contract import bind_tools
+    bind_tools(delivery.envelope_for(member.company, model), task.required_tools)
     proof = verify_admission(AdmissionRequest(str(member.company.company_id), str(member.company.deployment_id),
         runtime.authorization.data["sha256"], _fingerprint(request), request, model, request["reserve_usd"]))
     return {"requestID": request["selection_id"], "newTask": proof.new_task_verified,

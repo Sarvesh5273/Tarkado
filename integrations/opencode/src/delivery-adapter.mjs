@@ -85,6 +85,10 @@ export class FreshSessionDeliveryAdapter {
     const body = await event.request.clone().json()
     if (body.model !== this.binding.gateway_model) throw new Error("Wire model differs from fixed task model.")
     if (body.metadata) throw new Error("Unreviewed metadata overlay refused.")
+    const functions = new Set((this.binding.local_tools ?? []).map(tool => tool.name))
+    if (body.tools && (!Array.isArray(body.tools) || body.tools.some(tool => tool.type !== "function" || !functions.has(tool.function?.name)))) {
+      throw new Error("Only this task's reviewed local function tools may be sent; remote/paid/hosted tools are refused.")
+    }
     if (body.max_tokens !== undefined) {
       if (body.max_completion_tokens !== undefined) throw new Error("Conflicting output caps refused.")
       body.max_completion_tokens = body.max_tokens
@@ -118,6 +122,14 @@ export class FreshSessionDeliveryAdapter {
     if (this.outputLimit === undefined) throw new Error("This task has no explicit outgoing output limit.")
     if (event.options.maxTokens !== undefined && (!Number.isSafeInteger(event.options.maxTokens) || event.options.maxTokens < 1)) throw new Error("Unknown/invalid output override refused.")
     event.options.maxTokens = Math.min(event.options.maxTokens ?? this.outputLimit, this.outputLimit)
+    if (event.tools) {
+      // Remove only tools from THIS task's outgoing request, never the host tool
+      // registry or another session. The gateway validates exact final schemas.
+      // Local execution/permissions/no-paid-side-effects still require the
+      // independent host verifier; a tool name/hash is not those guarantees.
+      const allowed = new Set((this.binding.local_tools ?? []).map(tool => tool.name))
+      for (const name of Object.keys(event.tools)) if (!allowed.has(name)) delete event.tools[name]
+    }
   }
 }
 
