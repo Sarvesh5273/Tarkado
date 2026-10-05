@@ -1,0 +1,1398 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Tarkado — planned deployment workflow (illustrative simulation)</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      @font-face{font-family:"Inter";font-weight:400;font-style:normal;font-display:block;src:url("assets/fonts/Inter-Regular.woff2") format("woff2");}
+      @font-face{font-family:"Inter";font-weight:700;font-style:normal;font-display:block;src:url("assets/fonts/Inter-Bold.woff2") format("woff2");}
+      @font-face{font-family:"EB Garamond";font-weight:400;font-style:normal;font-display:block;src:url("assets/fonts/EBGaramond-Regular.woff2") format("woff2");}
+      @font-face{font-family:"EB Garamond";font-weight:700;font-style:normal;font-display:block;src:url("assets/fonts/EBGaramond-Bold.woff2") format("woff2");}
+      @font-face{font-family:"JetBrains Mono";font-weight:400;font-style:normal;font-display:block;src:url("assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");}
+      @font-face{font-family:"JetBrains Mono";font-weight:700;font-style:normal;font-display:block;src:url("assets/fonts/JetBrainsMono-Bold.woff2") format("woff2");}
+
+      *{margin:0;padding:0;box-sizing:border-box}
+      html,body{width:1920px;height:1080px;overflow:hidden;background:#FAF9F5}
+      #root{position:relative;width:100%;height:100%;overflow:hidden;
+        font-family:"Inter",system-ui,sans-serif;color:#141413;
+        --cream:#FAF9F5;--tile:#EFE9DE;--tile-strong:#ECE3D4;--ink:#141413;
+        --coral:#8F5441;--coral-bright:#CC785C;--muted:#6B6459;
+        --navy:#181715;--navy-soft:#1F1E1B;--navy-elev:#252320;
+        --hair:rgba(20,20,19,.12);--hair-strong:rgba(20,20,19,.20);--hair-dark:rgba(250,249,245,.14);
+        --info:#1D4ED8;--info-d:#4CC3F2;--ok:#0E6130;--ok-d:#5DB872;
+        --warn:#954407;--warn-d:#E8A55A;
+        --danger:#B91C1C;--danger-d:#C64545;
+        --card-shadow:0 1px 3px rgba(20,20,19,.08),0 4px 16px rgba(20,20,19,.04);
+      }
+
+      /* ---------- scene scaffolding ---------- */
+      .scene{position:absolute;inset:0;overflow:hidden}
+      #sc1{z-index:1}#sc2{z-index:2}#sc3{z-index:3}#sc4{z-index:4}#sc5{z-index:5}
+      #sc6{z-index:6}#sc7{z-index:7}#sc8{z-index:8}#sc9{z-index:9}#sc10{z-index:10}
+      #sc11{z-index:11}#sc12{z-index:12}#sc13{z-index:13}
+      .travel{position:absolute;inset:0}
+      .ground{position:absolute;inset:0;background:
+        linear-gradient(rgba(20,20,19,.05) 1px,transparent 1px) 0 0/96px 96px,
+        linear-gradient(90deg,rgba(20,20,19,.05) 1px,transparent 1px) 0 0/96px 96px,
+        var(--cream)}
+      .ground.plain{background:var(--cream)}
+
+      .kicker{position:absolute;left:80px;top:58px;font:700 24px/1 "JetBrains Mono",monospace;
+        letter-spacing:.16em;text-transform:uppercase;color:var(--ink)}
+      .kicker i{color:var(--coral);font-style:normal;margin-right:10px}
+      .kicker span{color:var(--muted);margin-left:14px;letter-spacing:.1em}
+
+      .stage{position:absolute;left:80px;right:80px;top:116px;height:664px}
+
+      .cap{position:absolute;left:80px;top:806px;width:1340px}
+      .cap .rule{height:1px;background:var(--hair);margin-bottom:14px}
+      .cap .txt{font:400 39px/1.32 "Inter",sans-serif;letter-spacing:-.008em;color:var(--ink)}
+      .cap .note{margin-top:8px;font:400 22px/1.4 "JetBrains Mono",monospace;color:var(--muted);letter-spacing:.04em}
+      .cap .mark{color:var(--coral);font-style:normal;margin-right:10px}
+
+      .persist{position:absolute;left:80px;top:1006px;z-index:50;
+        font:700 19px/1 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase;
+        color:var(--muted);display:flex;align-items:center;gap:12px}
+      .persist i{color:var(--coral);font-style:normal}
+      .persist b{color:var(--muted);font-weight:400}
+
+      /* ---------- shared type ---------- */
+      .h-display{font:400 96px/1.04 "EB Garamond",Georgia,serif;letter-spacing:-.024em;color:var(--ink)}
+      .h-lead{font:400 52px/1.18 "EB Garamond",Georgia,serif;letter-spacing:-.018em;color:var(--ink)}
+      .h-card{font:700 30px/1.2 "Inter",sans-serif;letter-spacing:-.01em;color:var(--ink)}
+      .body{font:400 26px/1.45 "Inter",sans-serif;color:#4a4640}
+      .mono{font-family:"JetBrains Mono",monospace}
+      .mlabel{font:700 19px/1.3 "JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+      .w{display:inline-block}
+
+      /* ---------- status chips (glyph + label + colour) ---------- */
+      .chip{display:inline-flex;align-items:center;gap:9px;padding:8px 12px;border-radius:6px;
+        border:1px solid;font:700 17px/1 "JetBrains Mono",monospace;letter-spacing:.09em;text-transform:uppercase}
+      .chip .g{font-size:18px;line-height:1}
+      .c-info{color:var(--info);border-color:var(--info);background:rgba(29,78,216,.07)}
+      .c-ok{color:var(--ok);border-color:var(--ok);background:rgba(21,128,61,.07)}
+      .c-warn{color:var(--warn);border-color:var(--warn);background:rgba(180,83,9,.07)}
+      .c-danger{color:var(--danger);border-color:var(--danger);background:rgba(185,28,28,.07)}
+      .c-neutral{color:#6b665f;border-color:var(--hair-strong);background:rgba(20,20,19,.03)}
+      .dk .c-info,.dchip.c-info{color:var(--info-d);border-color:rgba(76,195,242,.5);background:rgba(76,195,242,.10)}
+      .dk .c-ok,.dchip.c-ok{color:var(--ok-d);border-color:rgba(93,184,114,.5);background:rgba(93,184,114,.10)}
+      .dk .c-warn,.dchip.c-warn{color:var(--warn-d);border-color:rgba(232,165,90,.5);background:rgba(232,165,90,.10)}
+      .dk .c-danger,.dchip.c-danger{color:var(--danger-d);border-color:rgba(198,69,69,.55);background:rgba(198,69,69,.10)}
+
+      /* ---------- windows ---------- */
+      .win{position:absolute;background:var(--navy);border:1px solid var(--hair-dark);
+        border-radius:8px;overflow:hidden;box-shadow:var(--card-shadow);color:#e8e4dc}
+      .win-bar{height:46px;background:var(--navy-elev);display:flex;align-items:center;gap:16px;
+        padding:0 18px;border-bottom:1px solid var(--hair-dark)}
+      .dots{display:flex;gap:8px}
+      .dot{width:11px;height:11px;border-radius:50%;background:#3d3a35}
+      .win-title{font:400 19px/1 "JetBrains Mono",monospace;color:#a49d93;letter-spacing:.06em}
+      .recon{margin-left:auto;font:700 15px/1 "JetBrains Mono",monospace;letter-spacing:.11em;
+        text-transform:uppercase;color:#8d877f;border:1px solid var(--hair-dark);border-radius:6px;padding:7px 10px}
+      .sess{padding:14px 22px 6px;font:400 19px/1.4 "JetBrains Mono",monospace;color:#a49d93;letter-spacing:.03em;
+        border-bottom:1px solid rgba(250,249,245,.07);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+      .sess b{color:#e8e4dc;font-weight:700}
+      .conv{padding:14px 22px 4px;display:flex;flex-direction:column;gap:11px}
+      .msg{font:400 21px/1.42 "Inter",sans-serif;color:#cfc9c0;max-width:88%}
+      .msg.u{color:#efeadf}
+      .msg .pfx{font-family:"JetBrains Mono",monospace;color:#8B857C;margin-right:10px}
+      .tools{margin-top:6px;padding:0 22px;display:flex;flex-direction:column;gap:7px}
+      .tool{display:flex;align-items:center;gap:12px;font:400 19px/1 "JetBrains Mono",monospace;color:#b8b2a8}
+      .tool .sq{width:13px;height:13px;border-radius:3px;background:#4a4640;flex:none}
+      .tool .tgt{color:#8d877f}
+      .tool .st{margin-left:auto;font:700 15px/1 "JetBrains Mono",monospace;letter-spacing:.1em;
+        padding:6px 9px;border-radius:5px;border:1px solid}
+      .composer{position:absolute;left:0;right:0;bottom:0;border-top:1px solid var(--hair-dark);
+        background:var(--navy-soft);padding:14px 20px;display:flex;flex-direction:column;
+        align-items:stretch;gap:0}
+      .cbox{flex:1;border:1px solid var(--hair-dark);border-radius:6px;padding:12px 14px;
+        font:400 20px/1 "JetBrains Mono",monospace;color:#efeadf;display:flex;align-items:center;min-height:46px}
+      .caret{display:inline-block;width:10px;height:22px;background:var(--coral-bright);margin-left:3px;vertical-align:-4px}
+      .model{display:flex;align-items:center;gap:9px;border:1px solid rgba(250,249,245,.28);border-radius:6px;
+        padding:11px 13px;font:700 17px/1 "JetBrains Mono",monospace;letter-spacing:.07em;color:#e8e4dc;
+        background:rgba(250,249,245,.05);white-space:nowrap}
+      .model em{font-style:normal;color:#8d877f;font-weight:400}
+      .send{width:44px;height:44px;border-radius:6px;background:rgba(250,249,245,.09);
+        display:flex;align-items:center;justify-content:center;color:#cfc9c0;font-size:20px;flex:none}
+      .tark{position:absolute;right:20px;top:0;display:flex;align-items:center;gap:12px;
+        font:700 16px/1 "JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:#a49d93}
+      .tark .sep{width:1px;height:20px;background:var(--hair-dark)}
+      .tark .st{font-weight:400;letter-spacing:.05em;text-transform:none;color:#8d877f}
+
+      /* ---------- dashboard ---------- */
+      .dash{position:absolute;background:var(--cream);border:1px solid var(--hair-strong);
+        border-radius:8px;overflow:hidden;box-shadow:var(--card-shadow);display:flex}
+      .rail{width:236px;background:var(--tile);border-right:1px solid var(--hair);padding:18px 0;flex:none}
+      .rail-h{font:700 15px/1 "JetBrains Mono",monospace;letter-spacing:.14em;text-transform:uppercase;
+        color:var(--muted);padding:0 20px 12px}
+      .ri{font:700 17px/1 "JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase;
+        color:#6b665f;padding:13px 20px;display:flex;align-items:center;gap:9px}
+      .ri.on{color:var(--ink);background:rgba(20,20,19,.045)}
+      .ri .fl{color:var(--coral);font-size:15px}
+      .dmain{flex:1;padding:20px 26px;position:relative;overflow:hidden}
+      .dhead{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--hair)}
+      .dhead .t{font:700 30px/1.1 "Inter",sans-serif;letter-spacing:-.012em}
+      .dhead .id{margin-left:auto;font:400 18px/1 "JetBrains Mono",monospace;color:var(--muted);letter-spacing:.06em}
+      .card{background:var(--tile);border:1px solid var(--hair);border-radius:8px;padding:15px 17px;
+        box-shadow:var(--card-shadow)}
+      .card.on-cream{background:var(--cream)}
+      .row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--hair)}
+      .row:last-child{border-bottom:0}
+      .row .lbl{font:400 23px/1.3 "Inter",sans-serif;color:#33302b}
+      .row .sub{font:400 18px/1.3 "JetBrains Mono",monospace;color:var(--muted);letter-spacing:.04em}
+      .row .rt{margin-left:auto;display:flex;gap:10px;align-items:center}
+      .strike{color:var(--danger);text-decoration:line-through;text-decoration-thickness:2px}
+      .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+      .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+      .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:13px 18px;
+        border-radius:6px;border:1px solid;font:700 18px/1 "JetBrains Mono",monospace;letter-spacing:.08em;
+        text-transform:uppercase;background:transparent}
+      .b-primary{color:var(--cream);background:var(--ink);border-color:var(--ink)}
+      .b-ghost{color:#4a4640;border-color:var(--hair-strong);background:rgba(20,20,19,.03)}
+      .b-info{color:var(--info);border-color:var(--info);background:rgba(29,78,216,.06)}
+
+      /* ---------- misc ---------- */
+      .cursor{position:absolute;width:30px;height:34px;left:0;top:0;z-index:40;pointer-events:none}
+      .cursor svg{display:block;filter:drop-shadow(0 2px 4px rgba(20,20,19,.28))}
+      .rip{position:absolute;border:2px solid var(--coral);border-radius:50%;width:14px;height:14px;
+        left:0;top:0;opacity:0}
+      .rule1{height:1px;background:var(--hair)}
+      .rule-d{height:1px;background:var(--hair-dark)}
+      .bar{height:14px;border-radius:7px;background:rgba(20,20,19,.10);overflow:hidden}
+      .bar > i{display:block;height:100%;background:var(--info);border-radius:7px;transform-origin:left center}
+      .num{font:400 66px/1 "EB Garamond",Georgia,serif;letter-spacing:-.02em}
+      .node{border:1px solid var(--hair-strong);background:var(--cream);border-radius:8px;
+        padding:16px 18px;display:flex;flex-direction:column;gap:9px;box-shadow:var(--card-shadow)}
+      .node .idx{font:700 16px/1 "JetBrains Mono",monospace;letter-spacing:.14em;color:var(--coral)}
+      .node .lb{font:400 24px/1.25 "Inter",sans-serif;color:var(--ink)}
+      .conn{height:2px;background:var(--hair-strong);flex:1;transform-origin:left center}
+      .footer-note{position:absolute;left:80px;top:700px;width:1340px;font:400 24px/1.42 "Inter",sans-serif;color:#5a554e}
+      .tag{font:700 15px/1 "JetBrains Mono",monospace;letter-spacing:.12em;text-transform:uppercase;
+        padding:7px 10px;border-radius:5px;border:1px solid}
+      .h1{font:400 86px/1.05 "EB Garamond",Georgia,serif;letter-spacing:-.024em;color:var(--ink)}
+      .h2{font:400 62px/1.1 "EB Garamond",Georgia,serif;letter-spacing:-.022em;color:var(--ink)}
+      .split{display:flex;gap:36px}
+      .col{display:flex;flex-direction:column;gap:16px}
+      .conn-v{width:2px;height:30px;background:var(--hair-strong);transform-origin:top center;flex:none}
+      .conn-h{display:inline-block;height:2px;background:var(--hair-strong);transform-origin:left center;flex:none}
+      .conn-d{height:0;border-top:2px dashed rgba(20,20,19,.28);transform-origin:left center;flex:none}
+      .tw{display:inline-block;white-space:nowrap}
+      .termblock{position:absolute;left:0;top:0;width:1090px;height:664px}
+      .side{position:absolute;right:0;top:0;width:648px;height:664px;display:flex;flex-direction:column;gap:17px}
+      .callout{background:var(--cream);border:1px solid var(--hair-strong);border-radius:8px;
+        padding:15px 17px;box-shadow:var(--card-shadow)}
+      .callout .ct{font:700 15px/1 "JetBrains Mono",monospace;letter-spacing:.13em;text-transform:uppercase;
+        color:var(--coral);margin-bottom:9px;display:flex;align-items:center;gap:8px}
+      .callout .cb{font:400 22px/1.4 "Inter",sans-serif;color:#33302b}
+      .tarkrow{display:flex;align-items:center;gap:14px;padding:10px 20px;
+        border-top:1px solid rgba(250,249,245,.11);background:#1a1916;
+        font:400 17px/1 "JetBrains Mono",monospace;color:#8d877f;letter-spacing:.05em}
+      .tarkrow b{color:#e8e4dc;font-weight:700}
+      .tarkrow .sp{width:1px;height:16px;background:rgba(250,249,245,.16);flex:none}
+      .glyph{width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+        font-size:18px;flex:none;font-weight:700}
+      .g-info{background:rgba(29,78,216,.12);color:var(--info)}
+      .g-ok{background:rgba(16,107,51,.12);color:var(--ok)}
+      .g-warn{background:rgba(161,74,8,.12);color:var(--warn)}
+      .g-danger{background:rgba(185,28,28,.12);color:var(--danger)}
+      .lite{background:var(--cream);border:1px solid var(--hair-strong);border-radius:8px;
+        box-shadow:var(--card-shadow);padding:16px 18px}
+      .term-body{padding:8px 22px 14px;display:flex;flex-direction:column;gap:12px}
+      .strip{background:var(--navy);border:1px solid var(--hair-dark);border-radius:8px;
+        padding:14px 16px;color:#cfc9c0;box-shadow:var(--card-shadow)}
+      .drawer{position:absolute;background:var(--cream);border:1px solid var(--hair-strong);border-radius:8px;
+        box-shadow:var(--card-shadow);overflow:hidden}
+      .drawer-h{background:var(--tile-strong);border-bottom:1px solid var(--hair);padding:15px 20px;
+        display:flex;align-items:center;gap:14px}
+      .drawer-h .dt{font:700 22px/1 "JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+      .drawer-b{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+      .kv{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-bottom:1px solid var(--hair)}
+      .kv:last-child{border-bottom:0}
+      .kv .k{font:700 15px/1.3 "JetBrains Mono",monospace;letter-spacing:.12em;text-transform:uppercase;
+        color:var(--muted);width:190px;flex:none}
+      .kv .v{font:400 23px/1.35 "Inter",sans-serif;color:var(--ink)}
+      .kv .v .m{font-family:"JetBrains Mono",monospace;font-size:20px;letter-spacing:.03em}
+      .flow{display:flex;align-items:center;gap:16px}
+      .flow .fitem{flex:1}
+      .bigq{font:400 150px/1 "EB Garamond",Georgia,serif;color:var(--coral);letter-spacing:-.03em}
+      .mrow{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--hair)}
+      .mrow:last-child{border-bottom:0}
+      .mrow .mk{font:700 15px/1.4 "JetBrains Mono",monospace;letter-spacing:.11em;text-transform:uppercase;
+        color:var(--muted);width:210px;flex:none}
+      .mrow .mv{font:400 23px/1.35 "Inter",sans-serif;color:var(--ink);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+      .sep-dot{color:var(--muted)}
+      .flash{position:absolute;border:2px solid var(--coral);border-radius:8px;pointer-events:none;opacity:0}
+      .ledger{display:flex;flex-direction:column;gap:10px}
+      .ledger-row{display:flex;align-items:center;gap:14px;background:var(--cream);
+        border:1px solid var(--hair);border-radius:8px;padding:13px 16px;box-shadow:var(--card-shadow)}
+      .ledger-row .lt{font:400 23px/1.3 "Inter",sans-serif;color:var(--ink);flex:1}
+      .ledger-row .lt b{font-family:"JetBrains Mono",monospace;font-size:19px;letter-spacing:.04em}
+      .win-dim{position:absolute;inset:0;background:rgba(24,23,21,.35)}
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="119"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div class="clip persist" id="persist" data-start="0" data-duration="119" data-track-index="0">
+        <i>&#10033;</i> Planned deployment workflow <b>&middot; illustrative simulation</b>
+      </div>
+      <!-- ============================ SCENE 1 ============================ -->
+      <section class="clip scene" id="sc1" data-start="0" data-duration="9.5" data-track-index="1">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 01 · where it starts<span>no model ever runs here</span></div>
+          <div class="stage">
+            <div class="split" style="height:664px">
+              <div style="width:800px;display:flex;flex-direction:column;gap:24px">
+                <div class="h1" data-at="0.8" data-y="26">Engineers still<br />choose alone.</div>
+                <div class="body" data-at="1.7" style="max-width:760px">
+                  Two approved tools, one private decision — and no record of which one was used,
+                  or whether it worked.
+                </div>
+                <div class="col" data-at="2.4" data-stagger="0.2">
+                  <div class="card">
+                    <div style="display:flex;align-items:center;gap:14px">
+                      <span class="glyph" style="background:rgba(20,20,19,.06);color:#4a4640">&gt;_</span>
+                      <span class="lbl" style="font:400 24px/1.3 Inter,sans-serif;color:var(--ink)">IDE coding agent</span>
+                      <span class="chip c-warn" style="margin-left:auto"><span class="g">?</span>No record</span>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div style="display:flex;align-items:center;gap:14px">
+                      <span class="glyph" style="background:rgba(20,20,19,.06);color:#4a4640">&#9787;</span>
+                      <span class="lbl" style="font:400 24px/1.3 Inter,sans-serif;color:var(--ink)">Chat app in a tab</span>
+                      <span class="chip c-warn" style="margin-left:auto"><span class="g">?</span>No record</span>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div style="display:flex;align-items:center;gap:14px">
+                      <span class="glyph" style="background:rgba(20,20,19,.06);color:#4a4640">&#9881;</span>
+                      <span class="lbl" style="font:400 24px/1.3 Inter,sans-serif;color:var(--ink)">A script nobody reviewed</span>
+                      <span class="chip c-warn" style="margin-left:auto"><span class="g">?</span>No record</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="width:880px;display:flex;flex-direction:column;gap:0;height:664px">
+                <div class="flow" data-at="3.1">
+                  <div class="node fitem" style="padding:18px 20px">
+                    <div class="idx">TOOL A</div>
+                    <div class="lb">IDE agent<br /><span class="mlabel">picks a model</span></div>
+                  </div>
+                  <div class="node fitem" style="padding:18px 20px">
+                    <div class="idx">TOOL B</div>
+                    <div class="lb">Chat app<br /><span class="mlabel">picks a model</span></div>
+                  </div>
+                </div>
+                <div class="conn-v" data-at="3.6" style="margin:16px auto"></div>
+                <div class="card on-cream" data-at="3.9" style="padding:22px 24px;position:relative">
+                  <div style="display:flex;align-items:flex-start;gap:22px">
+                    <div class="bigq">?</div>
+                    <div style="flex:1">
+                      <div class="mlabel" style="color:var(--coral);margin-bottom:8px">The decision</div>
+                      <div class="h-card" style="font-size:34px;margin-bottom:12px">Nobody at the company<br />can see it.</div>
+                      <span class="chip c-warn"><span class="g">!</span>Unknown · no policy signal</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="conn-d" data-at="4.9" style="margin:16px auto 16px 0;width:60%"></div>
+                <div class="card on-cream" data-at="5.2" style="padding:20px 24px">
+                  <div style="display:flex;align-items:center;gap:18px">
+                    <span class="glyph g-danger">✕</span>
+                    <div>
+                      <div class="mlabel">Company evidence base</div>
+                      <div class="h-card" style="font-size:30px;margin-top:6px">Nothing linked. Nothing learned.</div>
+                    </div>
+                    <span class="chip c-danger" style="margin-left:auto"><span class="g">✕</span>Empty</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Engineers still choose alone — so the company keeps an evidence base
+              full of guesses instead of outcomes.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 2 ============================ -->
+      <section class="clip scene" id="sc2" data-start="8.5" data-duration="10" data-track-index="2">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 02 · one new task<span>OpenCode-style reconstruction</span></div>
+          <div class="stage">
+            <div class="termblock" data-at="0.4" data-y="30">
+              <div class="win" style="inset:0">
+                <div class="win-bar">
+                  <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                  <span class="win-title">opencode — northwind/payments-api</span>
+                  <span class="recon">Illustrative reconstruction</span>
+                </div>
+                <div class="sess" data-at="0.95">
+                  <span>session <b>ses_4f21c</b></span><span class="sep" style="color:#4a4640">·</span>
+                  <span>task <b>TASK-208</b></span><span class="sep" style="color:#4a4640">·</span>
+                  <span>branch <b>feat/idempotency-key</b></span><span class="sep" style="color:#4a4640">·</span>
+                  <span>model <b>Apex-Standard</b></span>
+                </div>
+                <div class="conv">
+                  <div class="msg u" data-at="1.5"><span class="pfx">›</span>Add an idempotency key to the charge endpoint so retried payments can’t double-bill.</div>
+                  <div class="msg" data-at="2.0"><span class="pfx">·</span>Reading the handler and its tests first.</div>
+                  <div class="msg" data-at="2.5"><span class="pfx">·</span>Handler stores the key on the charge row. Running the suite now.</div>
+                </div>
+                <div class="tools" data-at="3.0" data-stagger="0.4">
+                  <div class="tool"><span class="sq"></span>read<span class="tgt">src/charges/handler.ts</span><span class="st" style="color:var(--ok-d);border-color:rgba(93,184,114,.5)">Done</span></div>
+                  <div class="tool"><span class="sq"></span>grep<span class="tgt">idempotency</span><span class="st" style="color:var(--ok-d);border-color:rgba(93,184,114,.5)">Done</span></div>
+                  <div class="tool"><span class="sq"></span>edit<span class="tgt">src/charges/handler.ts</span><span class="st" style="color:var(--ok-d);border-color:rgba(93,184,114,.5)">Done</span></div>
+                  <div class="tool"><span class="sq"></span>edit<span class="tgt">migrations/014_idempotency.sql</span><span class="st" style="color:var(--ok-d);border-color:rgba(93,184,114,.5)">Done</span></div>
+                  <div class="tool"><span class="sq"></span>bash<span class="tgt">pnpm test charges</span><span class="st" style="color:var(--warn-d);border-color:rgba(232,165,90,.5)">Running</span></div>
+                </div>
+                <div class="conv" data-at="4.3">
+                  <div class="msg" ><span class="pfx">·</span>24 tests pass. Opening a pull request for review.</div>
+                </div>
+                <div class="composer" data-at="4.5">
+                  <div class="tarkrow" style="border-top:0;padding:0 0 10px">
+                    <span style="color:#e8e4dc;font-weight:700">TARKADO</span><span class="sp"></span>
+                    <span>shadow · recommendation only</span><span class="sp"></span>
+                    <span>suggested <b>Apex-Standard</b></span><span class="sp"></span>
+                    <span style="color:var(--warn-d)">today 2 of 40 tasks left</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:16px;width:100%">
+                    <div class="cbox"><span class="tw" data-type="5.0">add the same guard to refunds too</span><span class="caret" data-at="4.9"></span></div>
+                    <div class="model" data-at="6.3"><em>model</em>Apex-Standard <em>▾</em></div>
+                    <div class="send" data-at="6.8">↵</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="side">
+              <div class="callout" data-at="7.1">
+                <div class="ct"><span class="glyph g-info" style="width:24px;height:24px;font-size:13px;border-radius:5px">i</span>Session · task header</div>
+                <div class="cb">Task ID, branch and the model actually selected stay visible while work happens.</div>
+              </div>
+              <div class="callout" data-at="7.5">
+                <div class="ct"><span class="glyph g-ok" style="width:24px;height:24px;font-size:13px;border-radius:5px">✓</span>Tool activity</div>
+                <div class="cb">Every tool call is shown with a glyph and a label — not colour alone.</div>
+              </div>
+              <div class="callout" data-at="7.9">
+                <div class="ct"><span class="glyph g-warn" style="width:24px;height:24px;font-size:13px;border-radius:5px">!</span>Prompt composer + model</div>
+                <div class="cb">Manual choice first. Tarkado suggests; the engineer decides.</div>
+              </div>
+              <div class="callout" data-at="8.3" style="background:var(--tile);border-color:var(--hair-strong)">
+                <div class="ct"><span class="glyph g-info" style="width:24px;height:24px;font-size:13px;border-radius:5px">i</span>Compact Tarkado status</div>
+                <div class="cb">A one-line strip: shadow mode, suggestion, remaining illustrative limits.</div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>The work starts in the terminal: one prompt, one declared model, and a
+              quiet Tarkado strip that only watches.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 3 ============================ -->
+      <section class="clip scene" id="sc3" data-start="18" data-duration="8" data-track-index="3">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 03 · from strip to task panel<span>recommendation only</span></div>
+          <div class="stage">
+            <div style="position:absolute;left:0;top:16px;width:430px" data-at="0.5" data-y="24">
+              <div class="mlabel" style="margin-bottom:12px">Source · terminal status area</div>
+              <div class="strip">
+                <div style="font:700 16px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#e8e4dc;margin-bottom:12px">TARKADO · SHADOW</div>
+                <div style="font:400 17px/1.6 'JetBrains Mono',monospace;color:#a49d93">
+                  task <span style="color:#e8e4dc">TASK-208</span><br />
+                  rec <span style="color:#e8e4dc">Apex-Standard</span><br />
+                  status <span style="color:var(--warn-d)">watching</span>
+                </div>
+              </div>
+              <div class="card on-cream" style="margin-top:16px;padding:14px 16px">
+                <div class="mlabel" style="margin-bottom:8px">Mode</div>
+                <span class="chip c-info"><span class="g">i</span>Shadow · no extra request</span>
+              </div>
+            </div>
+
+            <div style="position:absolute;left:452px;top:150px;width:150px;height:2px;background:var(--hair-strong);transform-origin:left center" data-at="1.3"></div>
+            <div style="position:absolute;left:586px;top:142px;font:400 26px/1 'JetBrains Mono',monospace;color:var(--muted)" data-at="1.5">▶</div>
+
+            <div class="drawer" style="left:630px;top:0;width:1130px;height:664px" data-at="1.7" data-y="26">
+              <div class="drawer-h">
+                <span class="glyph g-info">i</span>
+                <span class="dt">Tarkado task panel</span>
+                <span class="mlabel" style="margin-left:auto;letter-spacing:.08em">TASK-208</span>
+              </div>
+              <div class="drawer-b" style="gap:0">
+                <div class="kv" data-at="2.2"><span class="k">Session</span><span class="v"><span class="m">ses_4f21c</span> · linked to the live task</span></div>
+                <div class="kv" data-at="2.4"><span class="k">Repository</span><span class="v"><span class="m">northwind/payments-api</span></span></div>
+                <div class="kv" data-at="2.6"><span class="k">Initiator</span><span class="v">Arjun <span class="sep-dot">·</span> junior</span></div>
+                <div class="kv" data-at="2.8"><span class="k">Policy</span><span class="v"><span class="m">v1.3</span> <span class="sep-dot">·</span> proposal <span class="m">v1.4</span></span></div>
+                <div class="kv" data-at="3.0"><span class="k">Limits</span><span class="v"><span class="m">$4.00 / task</span> <span class="sep-dot">·</span> <span class="m">$250 / month</span> <span class="sep-dot">·</span> <span class="m">40 tasks / day</span></span></div>
+                <div class="kv" data-at="3.2"><span class="k">Recommendation</span><span class="v"><span class="chip c-neutral"><span class="g">◆</span>Apex-Standard</span> <span class="mlabel" style="text-transform:none;letter-spacing:.03em;font-weight:400">suggested, not executed</span></span></div>
+                <div class="kv" data-at="3.5"><span class="k">State</span><span class="v"><span class="chip c-info"><span class="g">i</span>Shadow · recommendation only</span></span></div>
+              </div>
+              <div style="position:absolute;left:0;right:0;bottom:0;background:var(--tile-strong);
+                          border-top:1px solid var(--hair);padding:16px 20px;display:flex;gap:12px;flex-wrap:wrap" data-at="4.1">
+                <span class="chip c-ok"><span class="g">✓</span>No duplicate alternative-model request</span>
+                <span class="chip c-warn"><span class="g">!</span>Acceptance ≠ success ≠ pilot approval</span>
+                <span class="chip c-neutral"><span class="g">·</span>History retained</span>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>The strip expands into a task panel: policy, limits and shadow mode —
+              it never issues a second model request.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 4 ============================ -->
+      <section class="clip scene" id="sc4" data-start="25.5" data-duration="9" data-track-index="4">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 04 · the dashboard<span>company-managed credentials only</span></div>
+          <div class="stage">
+            <div class="dash" style="inset:0" data-at="0.4" data-y="30">
+              <div class="rail" data-at="0.9">
+                <div class="rail-h">Northwind Labs</div>
+                <div class="ri"><span class="fl">·</span>Overview</div>
+                <div class="ri on"><span class="fl">✱</span>Tasks</div>
+                <div class="ri"><span class="fl">·</span>Evidence</div>
+                <div class="ri"><span class="fl">·</span>Models</div>
+                <div class="ri"><span class="fl">·</span>Policy</div>
+                <div class="ri"><span class="fl">·</span>Pilot</div>
+                <div class="ri"><span class="fl">·</span>Corrections</div>
+                <div class="ri"><span class="fl">·</span>Audit log</div>
+              </div>
+              <div class="dmain">
+                <div class="dhead" data-at="1.3">
+                  <span class="t">Tasks</span>
+                  <span class="chip c-info"><span class="g">i</span>Shadow mode on</span>
+                  <span class="id">northwind/payments-api · feat/idempotency-key</span>
+                </div>
+
+                <div style="display:flex;gap:20px;margin-top:18px">
+                  <div class="card on-cream" style="flex:1.35" data-at="1.9">
+                    <div class="mlabel" style="margin-bottom:12px">Incoming from OpenCode</div>
+                    <div class="mrow"><span class="mk">Task</span><span class="mv"><span class="mono" style="font-size:21px">TASK-208</span> <span class="sep-dot">·</span> Add idempotency key</span></div>
+                    <div class="mrow"><span class="mk">Session link</span><span class="mv"><span class="mono" style="font-size:21px">ses_4f21c</span></span></div>
+                    <div class="mrow"><span class="mk">Initiator</span><span class="mv">Arjun <span class="sep-dot">·</span> junior</span></div>
+                    <div class="mrow"><span class="mk">Detected choice</span><span class="mv"><span class="chip c-neutral"><span class="g">◆</span>Apex-Standard</span></span></div>
+                  </div>
+
+                  <div class="card on-cream" style="flex:1" data-at="2.6">
+                    <div class="mlabel" style="margin-bottom:12px">Recorded, and kept apart</div>
+                    <div class="mrow"><span class="mk">Recommendation</span><span class="mv"><span class="chip c-info"><span class="g">i</span>Issued</span></span></div>
+                    <div class="mrow"><span class="mk">Acceptance</span><span class="mv"><span class="chip c-neutral"><span class="g">·</span>Not answered</span></span></div>
+                    <div class="mrow"><span class="mk">Actual model use</span><span class="mv"><span class="chip c-neutral"><span class="g">·</span>Pending</span></span></div>
+                    <div class="mrow"><span class="mk">Outcome</span><span class="mv"><span class="chip c-warn"><span class="g">!</span>Unknown</span></span></div>
+                  </div>
+                </div>
+
+                <div class="card on-cream" style="margin-top:18px" data-at="3.5">
+                  <div style="display:flex;gap:14px;align-items:flex-start">
+                    <span class="glyph g-warn" style="width:30px;height:30px;font-size:16px">!</span>
+                    <div>
+                      <div class="h-card" style="font-size:26px">Four separate columns, never merged.</div>
+                      <div class="body" style="font-size:23px;margin-top:8px">
+                        A recommendation, an acceptance, the model that actually ran, and the eventual
+                        outcome are linked — but never collapsed into one number.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="position:absolute;left:26px;right:26px;bottom:16px;display:flex;gap:14px;align-items:center" data-at="4.4">
+                  <span class="chip c-ok"><span class="g">✓</span>Company-managed gateway credentials</span>
+                  <span class="chip c-neutral"><span class="g">·</span>No consumer subscription</span>
+                  <span class="chip c-neutral"><span class="g">·</span>Illustrative values</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>The dashboard sees the same task — session-linked, with acceptance,
+              actual model use and outcome recorded separately.
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ============================ SCENE 5 ============================ -->
+      <section class="clip scene" id="sc5" data-start="34" data-duration="10" data-track-index="5">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 05 · a human still decides<span>designated senior · Sam Ortiz</span></div>
+          <div class="stage">
+            <div class="dash" style="inset:0" data-at="0.4" data-y="30">
+              <div class="rail" data-at="0.9">
+                <div class="rail-h">Northwind Labs</div>
+                <div class="ri"><span class="fl">·</span>Overview</div>
+                <div class="ri"><span class="fl">·</span>Tasks</div>
+                <div class="ri"><span class="fl">·</span>Evidence</div>
+                <div class="ri"><span class="fl">·</span>Models</div>
+                <div class="ri"><span class="fl">·</span>Policy</div>
+                <div class="ri"><span class="fl">·</span>Pilot</div>
+                <div class="ri on"><span class="fl">✱</span>Review</div>
+                <div class="ri"><span class="fl">·</span>Audit log</div>
+              </div>
+              <div class="dmain">
+                <div class="dhead" data-at="1.3">
+                  <span class="t">Review · TASK-208</span>
+                  <span class="chip c-warn"><span class="g">!</span>Awaiting reviewer</span>
+                  <span class="id">reviewer · Sam Ortiz (owner / admin)</span>
+                </div>
+
+                <div style="display:flex;gap:18px;margin-top:18px;align-items:flex-start">
+                  <div class="card on-cream" style="width:498px" data-at="1.9">
+                    <div class="mlabel" style="margin-bottom:12px">Evidence attached</div>
+                    <div class="mrow"><span class="mk">Linked records</span><span class="mv"><span class="mono" style="font-size:21px">42</span> <span class="sep-dot">·</span> <span class="mono" style="font-size:21px">6 sessions</span></span></div>
+                    <div class="mrow"><span class="mk">Similar tasks</span><span class="mv">11 with a recorded outcome</span></div>
+                    <div class="mrow"><span class="mk">Negatives kept</span><span class="mv"><span class="chip c-danger"><span class="g">✕</span>4 failures</span> <span class="chip c-warn"><span class="g">!</span>2 overrides</span></span></div>
+                    <div class="mrow"><span class="mk">Compatibility</span><span class="mv"><span class="chip c-warn"><span class="g">!</span>Per-task, never blanket</span></span></div>
+                  </div>
+
+                  <div class="card on-cream" style="width:470px" data-at="2.6">
+                    <div class="mlabel" style="margin-bottom:12px">Decision</div>
+                    <div class="body" style="font-size:22px;color:#33302b">
+                      Should <span class="mono" style="font-size:19px">Apex-Standard</span> be recorded as the
+                      suggested policy for this task type?
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:16px" id="s5btns" data-at="3.2" data-stagger="0.16">
+                      <span class="btn b-primary" id="s5accept">✓ Accept</span>
+                      <span class="btn b-ghost">✕ Reject</span>
+                      <span class="btn b-ghost">◷ Defer</span>
+                    </div>
+                    <div style="margin-top:14px" data-at="3.9" id="s5result">
+                      <span class="chip c-ok"><span class="g">✓</span>Accepted · 05 Oct 2026 · Sam Ortiz</span>
+                    </div>
+                  </div>
+
+                  <div class="card" style="width:430px;background:var(--tile-strong)" data-at="3.0">
+                    <div class="mlabel" style="margin-bottom:12px">Sticky summary</div>
+                    <div class="mrow"><span class="mk" style="width:160px">Acceptance</span><span class="mv" style="font-size:21px">Recorded</span></div>
+                    <div class="mrow"><span class="mk" style="width:160px">Success</span><span class="mv" style="font-size:21px"><span class="chip c-warn"><span class="g">!</span>Not established</span></span></div>
+                    <div class="mrow"><span class="mk" style="width:160px">Pilot approval</span><span class="mv" style="font-size:21px"><span class="chip c-warn"><span class="g">!</span>Still required</span></span></div>
+                    <div class="mrow"><span class="mk" style="width:160px">Learning</span><span class="mv" style="font-size:21px"><span class="chip c-neutral"><span class="g">·</span>No retraining yet</span></span></div>
+                  </div>
+                </div>
+
+                <div style="position:absolute;left:26px;right:26px;bottom:16px;padding-top:14px;border-top:1px solid var(--hair);display:flex;gap:14px;align-items:center" data-at="4.6">
+                  <span class="chip c-danger"><span class="g">!</span>Acceptance ≠ success ≠ pilot approval</span>
+                  <span class="chip c-neutral"><span class="g">·</span>Illustrative decision · fictional reviewers</span>
+                </div>
+              </div>
+            </div>
+            <div class="cursor" id="cur5" style="opacity:0">
+              <svg width="30" height="34" viewBox="0 0 30 34"><path d="M3 2 L3 26 L9.5 20.5 L13.5 29.5 L18 27.5 L14 18.5 L22.5 18 Z" fill="#141413" stroke="#FAF9F5" stroke-width="2"/></svg>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>A designated senior accepts or rejects — and acceptance is stored as
+              acceptance, never as proof that a model worked.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 6 ============================ -->
+      <section class="clip scene" id="sc6" data-start="43.5" data-duration="10" data-track-index="6">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 06 · recommendations never seize control<span>no silent switching</span></div>
+          <div class="stage">
+            <div class="termblock" style="width:990px" data-at="0.4" data-y="30">
+              <div class="win" style="inset:0">
+                <div class="win-bar">
+                  <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                  <span class="win-title">opencode — northwind/payments-api</span>
+                  <span class="recon">Illustrative reconstruction</span>
+                </div>
+                <div class="sess">
+                  <span>session <b>ses_4f21c</b></span><span style="color:#4a4640">·</span>
+                  <span>task <b>TASK-208</b></span><span style="color:#4a4640">·</span>
+                  <span>model <b>Apex-Standard</b></span>
+                </div>
+                <div class="conv" style="gap:9px">
+                  <div class="msg u" data-at="1.0"><span class="pfx">›</span>Now add the same guard to the refund path.</div>
+                  <div class="msg" data-at="1.4"><span class="pfx">·</span>Editing <span class="mono" style="font-size:19px">src/refunds/handler.ts</span> — task still running on Apex-Standard.</div>
+                  <div class="msg" data-at="1.9"><span class="pfx">·</span>Guard written. Test file next.</div>
+                </div>
+
+                <div style="margin:8px 22px;border:1px solid rgba(76,195,242,.45);border-left:4px solid var(--info-d);
+                     background:rgba(76,195,242,.07);border-radius:8px;padding:14px 16px" data-at="4.6" id="s6sheet">
+                  <div style="display:flex;align-items:center;gap:11px;margin-bottom:9px">
+                    <span class="glyph g-info" style="width:26px;height:26px;font-size:14px;border-radius:6px">i</span>
+                    <span style="font:700 16px/1 'JetBrains Mono',monospace;letter-spacing:.11em;text-transform:uppercase;color:#4CC3F2">Tarkado · suggestion at a task boundary</span>
+                    <span style="margin-left:auto;font:400 15px/1 'JetBrains Mono',monospace;color:#8d877f" id="s6at">queued · 11:42</span>
+                  </div>
+                  <div style="font:400 20px/1.45 'Inter',sans-serif;color:#cfc9c0">
+                    Consider <span class="mono" style="font-size:19px;color:#e8e4dc">Apex-Premium</span> for the
+                    next task. <span style="color:#8d877f">This session keeps its current model.</span>
+                  </div>
+                  <div style="display:flex;gap:11px;margin-top:12px">
+                    <span class="tag" style="color:#4CC3F2;border-color:rgba(76,195,242,.5);background:rgba(76,195,242,.09)">Suggestion only</span>
+                    <span class="tag" style="color:#a49d93;border-color:rgba(250,249,245,.22)">Applies at next task</span>
+                  </div>
+                </div>
+
+                <div class="tools" style="padding-bottom:8px" data-at="2.2" data-stagger="0.4">
+                  <div class="tool"><span class="sq"></span>edit<span class="tgt">src/refunds/handler.ts</span><span class="st" style="color:var(--ok-d);border-color:rgba(93,184,114,.5)">Done</span></div>
+                  <div class="tool"><span class="sq"></span>edit<span class="tgt">src/refunds/__tests__/handler.test.ts</span><span class="st" style="color:var(--ok-d);border-color:rgba(93,184,114,.5)">Done</span></div>
+                  <div class="tool"><span class="sq"></span>bash<span class="tgt">pnpm test refunds</span><span class="st" style="color:var(--ok-d);border-color:rgba(93,184,114,.5)">Done</span></div>
+                </div>
+                <div class="conv" data-at="3.7" style="padding-bottom:0">
+                  <div class="msg"><span class="pfx">·</span>Refund guard landed. Starting the changelog entry.</div>
+                </div>
+
+                <div class="composer">
+                  <div class="tarkrow" style="border-top:0;padding:0 0 10px">
+                    <span style="color:#e8e4dc;font-weight:700">TARKADO</span><span class="sp"></span>
+                    <span>active task untouched</span><span class="sp"></span>
+                    <span style="color:var(--ok-d)">model unchanged · Apex-Standard</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:16px;width:100%">
+                    <div class="cbox" style="color:#8d877f">write the changelog entry</div>
+                    <div class="model"><em>model</em>Apex-Standard <em>▾</em></div>
+                    <div class="send">↵</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="side" style="width:740px">
+              <div class="callout" style="padding:22px 22px" data-at="2.9">
+                <div class="ct"><span class="glyph g-ok" style="width:24px;height:24px;font-size:13px;border-radius:5px">✓</span>Correct timing</div>
+                <div class="cb" style="font-size:24px">Recommendations arrive at a <b>new-task</b> or <b>subagent</b> boundary, as a sheet the engineer can ignore.</div>
+              </div>
+              <div class="card on-cream" data-at="6.4" id="s6bad" style="padding:20px 22px">
+                <div class="mlabel" style="color:var(--danger);margin-bottom:12px">If it arrives mid-session instead</div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--hair)">
+                  <span class="glyph g-danger">✕</span>
+                  <div>
+                    <div style="font:400 23px/1.3 Inter,sans-serif;color:var(--ink)" class="strike">Silently switch to Apex-Premium</div>
+                    <div class="mlabel" style="margin-top:6px;text-transform:none;letter-spacing:.03em;font-weight:400">Refused before it can happen</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 0">
+                  <span class="glyph g-warn">!</span>
+                  <div>
+                    <div style="font:400 23px/1.3 Inter,sans-serif;color:var(--ink)">Recorded as a route event</div>
+                    <div class="mlabel" style="margin-top:6px;text-transform:none;letter-spacing:.03em;font-weight:400">Visible to the reviewer, kept in history</div>
+                  </div>
+                </div>
+              </div>
+              <div class="callout" data-at="7.4" style="background:var(--tile);border-color:var(--hair-strong)">
+                <div class="ct"><span class="glyph g-info" style="width:24px;height:24px;font-size:13px;border-radius:5px">i</span>Safe fallback</div>
+                <div class="cb">When evidence or confidence is missing, Tarkado does nothing and says so.</div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>A suggestion may only surface at a task boundary — a live session is
+              never switched to another model.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 7 ============================ -->
+      <section class="clip scene" id="sc7" data-start="53" data-duration="9" data-track-index="7">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 07 · credit follows the model that ran<span>attribution, not intent</span></div>
+          <div class="stage">
+            <div class="dash" style="inset:0" data-at="0.4" data-y="30">
+              <div class="rail" data-at="0.9">
+                <div class="rail-h">Northwind Labs</div>
+                <div class="ri"><span class="fl">·</span>Overview</div>
+                <div class="ri"><span class="fl">·</span>Tasks</div>
+                <div class="ri on"><span class="fl">✱</span>Evidence</div>
+                <div class="ri"><span class="fl">·</span>Models</div>
+                <div class="ri"><span class="fl">·</span>Policy</div>
+                <div class="ri"><span class="fl">·</span>Pilot</div>
+                <div class="ri"><span class="fl">·</span>Corrections</div>
+                <div class="ri"><span class="fl">·</span>Audit log</div>
+              </div>
+              <div class="dmain">
+                <div class="dhead" data-at="1.3">
+                  <span class="t">Credit attribution</span>
+                  <span class="chip c-info"><span class="g">i</span>October · illustrative</span>
+                  <span class="id">company-managed gateway</span>
+                </div>
+
+                <div style="display:flex;gap:14px;align-items:center;padding:16px 0 14px;border-bottom:1px solid var(--hair);font:700 15px/1 'JetBrains Mono',monospace;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)" data-at="1.8">
+                  <span style="width:170px">Task</span><span style="width:300px">Recommended</span>
+                  <span style="width:300px">Actually used</span><span style="flex:1">Credited to</span>
+                </div>
+
+                <div class="ledger" style="margin-top:14px">
+                  <div class="ledger-row" data-at="2.3" style="background:var(--cream)">
+                    <span class="mono" style="width:170px;font-size:20px">TASK-208</span>
+                    <span style="width:300px"><span class="chip c-neutral"><span class="g">◆</span>Apex-Premium</span></span>
+                    <span style="width:300px"><span class="chip c-ok"><span class="g">✓</span>Apex-Standard</span></span>
+                    <span class="lt" style="flex:1"><span class="chip c-info"><span class="g">i</span>Apex-Standard</span></span>
+                  </div>
+                  <div class="ledger-row" data-at="2.7" style="background:var(--cream)">
+                    <span class="mono" style="width:170px;font-size:20px">TASK-211</span>
+                    <span style="width:300px"><span class="chip c-neutral"><span class="g">◆</span>Apex-Standard</span></span>
+                    <span style="width:300px"><span class="chip c-ok"><span class="g">✓</span>Apex-Standard</span></span>
+                    <span class="lt" style="flex:1"><span class="chip c-info"><span class="g">i</span>Apex-Standard</span></span>
+                  </div>
+                  <div class="ledger-row" data-at="3.1" style="background:var(--cream)">
+                    <span class="mono" style="width:170px;font-size:20px">TASK-214</span>
+                    <span style="width:300px"><span class="chip c-neutral"><span class="g">◆</span>Apex-Premium</span></span>
+                    <span style="width:300px"><span class="chip c-warn"><span class="g">!</span>Override · Apex-Premium</span></span>
+                    <span class="lt" style="flex:1"><span class="chip c-info"><span class="g">i</span>Apex-Premium</span></span>
+                  </div>
+                  <div class="ledger-row" data-at="3.5" style="background:var(--cream)">
+                    <span class="mono" style="width:170px;font-size:20px">TASK-217</span>
+                    <span style="width:300px"><span class="chip c-neutral"><span class="g">◆</span>Apex-Standard</span></span>
+                    <span style="width:300px"><span class="chip c-danger"><span class="g">✕</span>Stopped by engineer</span></span>
+                    <span class="lt" style="flex:1"><span class="chip c-neutral"><span class="g">·</span>No credit issued</span></span>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:18px;position:absolute;left:26px;right:26px;bottom:16px" data-at="4.4">
+                  <div class="card on-cream" style="flex:1">
+                    <div class="mlabel">Monthly ceiling</div>
+                    <div class="num" style="margin-top:6px">$112<span style="font-size:34px;color:var(--muted)"> / $250</span></div>
+                    <div class="bar" style="margin-top:12px"><i id="s7bar" style="width:45%"></i></div>
+                  </div>
+                  <div class="card on-cream" style="flex:1">
+                    <div class="mlabel">Rule applied</div>
+                    <div class="h-card" style="font-size:27px;margin-top:8px">Credit follows execution.</div>
+                    <div class="body" style="font-size:21px;margin-top:6px">Recommendation alone never bills a task.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Credits, limits and monthly totals follow the model that actually ran —
+              never the one that was merely suggested.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 8 ============================ -->
+      <section class="clip scene" id="sc8" data-start="61.5" data-duration="8" data-track-index="8">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 08 · the usable evidence ledger<span>negatives stay in</span></div>
+          <div class="stage">
+            <div style="display:flex;gap:44px;align-items:flex-end;height:150px" data-at="0.5">
+              <div>
+                <div class="h2">What the company<br />can actually reuse.</div>
+              </div>
+              <div style="padding-bottom:8px">
+                <span class="chip c-info" style="font-size:19px;padding:11px 14px"><span class="g">i</span>42 linked records · 6 sessions</span>
+              </div>
+            </div>
+
+            <div class="grid3" style="margin-top:34px" data-at="1.6" data-stagger="0.22">
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                  <span class="mono" style="font-size:19px;color:var(--muted)">TASK-201</span>
+                  <span class="chip c-ok" style="margin-left:auto"><span class="g">✓</span>Supported</span>
+                </div>
+                <div class="h-card" style="font-size:25px">Retry-safe charge handler</div>
+                <div class="body" style="font-size:21px;margin-top:8px">Apex-Standard · reviewer accepted · outcome confirmed by tests.</div>
+              </div>
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                  <span class="mono" style="font-size:19px;color:var(--muted)">TASK-202</span>
+                  <span class="chip c-danger" style="margin-left:auto"><span class="g">✕</span>Failed</span>
+                </div>
+                <div class="h-card" style="font-size:25px">Refund idempotency attempt</div>
+                <div class="body strike" style="font-size:21px;margin-top:8px">Premium attempt failed review — kept, not deleted.</div>
+              </div>
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                  <span class="mono" style="font-size:19px;color:var(--muted)">TASK-205</span>
+                  <span class="chip c-warn" style="margin-left:auto"><span class="g">!</span>Override</span>
+                </div>
+                <div class="h-card" style="font-size:25px">Maya chose the premium model</div>
+                <div class="body" style="font-size:21px;margin-top:8px">Senior override recorded with a reason and a timestamp.</div>
+              </div>
+            </div>
+
+            <div class="grid3" style="margin-top:20px" data-at="3.0" data-stagger="0.22">
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                  <span class="mono" style="font-size:19px;color:var(--muted)">TASK-208</span>
+                  <span class="chip c-warn" style="margin-left:auto"><span class="g">!</span>Unknown</span>
+                </div>
+                <div class="h-card" style="font-size:25px">Outcome not yet known</div>
+                <div class="body" style="font-size:21px;margin-top:8px">No result yet — shown as unknown, never as a zero.</div>
+              </div>
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                  <span class="mono" style="font-size:19px;color:var(--muted)">TASK-211</span>
+                  <span class="chip c-danger" style="margin-left:auto"><span class="g">✕</span>Stopped</span>
+                </div>
+                <div class="h-card" style="font-size:25px">Run stopped mid-task</div>
+                <div class="body strike" style="font-size:21px;margin-top:8px">Engineer stopped it — the refusal counts as signal.</div>
+              </div>
+              <div class="card" style="padding:20px;background:var(--tile-strong)">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                  <span class="mlabel">Corrections</span>
+                  <span class="chip c-info" style="margin-left:auto"><span class="g">i</span>Append-only</span>
+                </div>
+                <div class="h-card" style="font-size:25px">Corrections add rows</div>
+                <div class="body" style="font-size:21px;margin-top:8px">A reviewer never rewrites history; they append to it.</div>
+              </div>
+            </div>
+
+            <div style="margin-top:22px;display:flex;gap:14px" data-at="4.4">
+              <span class="chip c-warn"><span class="g">!</span>Failures retained</span>
+              <span class="chip c-warn"><span class="g">!</span>Overrides retained</span>
+              <span class="chip c-danger"><span class="g">✕</span>Stops retained</span>
+              <span class="chip c-neutral"><span class="g">·</span>Priority to senior feedback, without discarding the rest</span>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Failures, overrides and stopped runs sit beside the wins — that is what
+              makes the ledger knowledge instead of marketing.
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ============================ SCENE 9 ============================ -->
+      <section class="clip scene" id="sc9" data-start="69" data-duration="11" data-track-index="9">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 09 · shadow-mode pilot readiness<span>readiness is not authorization</span></div>
+          <div class="stage">
+            <div class="h2" data-at="0.5" data-y="24">Before anything routes automatically.</div>
+
+            <div class="flow" style="margin-top:44px;align-items:stretch" data-at="1.4" data-stagger="0.35">
+              <div class="node fitem" style="padding:22px 22px">
+                <div class="idx">STEP 01</div>
+                <div class="lb" style="font-size:26px">Evidence base assembled</div>
+                <div class="mlabel" style="text-transform:none;letter-spacing:.03em;font-weight:400">42 linked records · 6 sessions</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                  <span class="tag" style="color:var(--ok);border-color:rgba(21,128,61,.4)">✓ 11 outcomes</span>
+                  <span class="tag" style="color:var(--danger);border-color:rgba(185,28,28,.4)">✕ 4 failures</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;padding-top:0"><span class="conn-h" data-at="2.4" style="width:44px"></span></div>
+              <div class="node fitem" style="padding:22px 22px">
+                <div class="idx">STEP 02</div>
+                <div class="lb" style="font-size:26px">Designated senior review</div>
+                <div class="mlabel" style="text-transform:none;letter-spacing:.03em;font-weight:400">Sam Ortiz · owner / admin</div>
+                <div><span class="chip c-ok"><span class="g">✓</span>Reviewed</span></div>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="2.8" style="width:44px"></span></div>
+              <div class="node fitem" style="padding:22px 22px">
+                <div class="idx">STEP 03</div>
+                <div class="lb" style="font-size:26px">Rollback rehearsed</div>
+                <div class="mlabel" style="text-transform:none;letter-spacing:.03em;font-weight:400">Fallback path verified, history kept</div>
+                <div><span class="chip c-ok"><span class="g">✓</span>Reversible</span></div>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="3.2" style="width:44px"></span></div>
+              <div class="node fitem" style="padding:22px 22px;border-color:var(--warn)">
+                <div class="idx">STEP 04</div>
+                <div class="lb" style="font-size:26px">Fresh MFA approval</div>
+                <div class="mlabel" style="text-transform:none;letter-spacing:.03em;font-weight:400">Entered once, confirmed once</div>
+                <div><span class="chip c-warn"><span class="g">!</span>Still required</span></div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:20px;margin-top:40px" data-at="4.6">
+              <div class="card on-cream" style="flex:1.6;padding:24px 26px;position:relative;border-color:var(--coral)">
+                <div class="mlabel" style="color:var(--coral)">Verdict</div>
+                <div class="h2" style="font-size:52px;margin-top:10px">Ready to recommend<br />≠ authorized to route.</div>
+                <div class="body" style="font-size:23px;margin-top:14px;max-width:900px">
+                  Confidence and accumulated evidence can only ever justify <b>considering</b> a pilot.
+                  Routing starts with an explicit approval from a designated senior.
+                </div>
+              </div>
+              <div class="card" style="flex:1;background:var(--tile-strong);padding:24px 24px" data-at="5.6">
+                <div class="mlabel">Pilot approval block</div>
+                <div class="mrow" style="padding-top:12px"><span class="mk" style="width:170px">Reference</span><span class="mv" style="font-size:22px"><span class="mono" style="font-size:20px">A1</span></span></div>
+                <div class="mrow"><span class="mk" style="width:170px">Granted by</span><span class="mv" style="font-size:22px">Sam Ortiz</span></div>
+                <div class="mrow"><span class="mk" style="width:170px">Expires</span><span class="mv" style="font-size:22px"><span class="mono" style="font-size:20px">2026-11-30</span></span></div>
+                <div class="mrow"><span class="mk" style="width:170px">Status now</span><span class="mv" style="font-size:22px"><span class="chip c-danger"><span class="g">✕</span>Not yet granted</span></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Shadow mode can gather evidence for months — and still stop at
+              “ready”, because readiness is not authorization.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 10 ============================ -->
+      <section class="clip scene" id="sc10" data-start="79.5" data-duration="10" data-track-index="10">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 10 · bounded routing switches on<span>limited, reversible, revoked</span></div>
+          <div class="stage">
+            <div class="split" style="height:664px">
+              <div style="width:900px;display:flex;flex-direction:column;gap:20px">
+                <div class="h2" data-at="0.5" data-y="24">Approved, then activated.</div>
+                <div class="card on-cream" data-at="1.3" style="padding:24px 26px">
+                  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+                    <span class="glyph g-ok" style="width:40px;height:40px;font-size:20px;border-radius:8px">✓</span>
+                    <div>
+                      <div class="mlabel">Pilot approval</div>
+                      <div class="h-card" style="font-size:32px;margin-top:4px">A1 · granted with fresh MFA</div>
+                    </div>
+                    <span class="chip c-ok" style="margin-left:auto"><span class="g">✓</span>Active</span>
+                  </div>
+                  <div class="mrow"><span class="mk">Scope</span><span class="mv" style="font-size:22px">Juniors and seniors, within evidence</span></div>
+                  <div class="mrow"><span class="mk">Task types</span><span class="mv" style="font-size:22px">Test-first, reviewable code changes only</span></div>
+                  <div class="mrow"><span class="mk">Limits</span><span class="mv" style="font-size:22px"><span class="mono" style="font-size:20px">$4.00 / task</span> · <span class="mono" style="font-size:20px">$250 / month</span></span></div>
+                  <div class="mrow"><span class="mk">Expires</span><span class="mv" style="font-size:22px"><span class="mono" style="font-size:20px">2026-11-30</span> · auto-revoked without renewal</span></div>
+                </div>
+                <div style="display:flex;gap:14px" data-at="2.4" data-stagger="0.18">
+                  <span class="chip c-ok"><span class="g">✓</span>Rollback retained</span>
+                  <span class="chip c-ok"><span class="g">✓</span>Monitoring on</span>
+                  <span class="chip c-neutral"><span class="g">·</span>Override always available</span>
+                </div>
+                <div class="card on-cream" data-at="3.4" style="padding:22px 26px;border-color:var(--coral)">
+                  <div class="mlabel" style="color:var(--coral)">Activation is a bounded event</div>
+                  <div class="body" style="font-size:24px;color:var(--ink);margin-top:8px">
+                    One approval, one scope, one expiry. Expanding it requires a new approval — never a
+                    confidence score.
+                  </div>
+                </div>
+              </div>
+
+              <div style="width:824px;display:flex;flex-direction:column;gap:18px">
+                <div class="card" style="background:var(--tile-strong);padding:22px 24px" data-at="1.9">
+                  <div class="mlabel">Scope of the pilot</div>
+                  <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <span class="glyph g-ok" style="width:28px;height:28px;font-size:15px">✓</span>
+                      <span style="font:400 24px/1.3 Inter,sans-serif">Juniors — routed within policy</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <span class="glyph g-ok" style="width:28px;height:28px;font-size:15px">✓</span>
+                      <span style="font:400 24px/1.3 Inter,sans-serif">Seniors — routed, with override</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <span class="glyph g-warn" style="width:28px;height:28px;font-size:15px">!</span>
+                      <span style="font:400 24px/1.3 Inter,sans-serif">Everything else — stays on safe fallback</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card on-cream" style="padding:22px 24px" data-at="4.2">
+                  <div class="mlabel">What activation does <u>not</u> mean</div>
+                  <div style="display:flex;flex-direction:column;gap:11px;margin-top:14px">
+                    <div style="display:flex;gap:12px;align-items:center"><span class="chip c-danger"><span class="g">✕</span>No savings claim</span><span class="body" style="font-size:22px">Public benchmarks are not evidence.</span></div>
+                    <div style="display:flex;gap:12px;align-items:center"><span class="chip c-danger"><span class="g">✕</span>No blanket compatibility</span><span class="body" style="font-size:22px">Compatibility stays per-task.</span></div>
+                    <div style="display:flex;gap:12px;align-items:center"><span class="chip c-danger"><span class="g">✕</span>No consumer subscriptions</span><span class="body" style="font-size:22px">Company gateway only.</span></div>
+                  </div>
+                </div>
+                <div class="card on-cream" style="padding:20px 24px" data-at="5.4">
+                  <div style="display:flex;align-items:center;gap:14px">
+                    <span class="glyph g-info">i</span>
+                    <span class="body" style="font-size:23px;color:var(--ink)">Revoke at any time — history and evidence remain untouched.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Routing switches on only inside an approved scope, with a rollback
+              that stays one click away.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 11 ============================ -->
+      <section class="clip scene" id="sc11" data-start="89" data-duration="9" data-track-index="11">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 11 · a new task enters routing<span>gate first, fallback always</span></div>
+          <div class="stage">
+            <div class="flow" style="gap:0;align-items:stretch" data-at="0.5" data-stagger="0.3">
+              <div class="node fitem" style="padding:22px 22px">
+                <div class="idx">NEW TASK</div>
+                <div class="lb" style="font-size:25px">TASK-231<br /><span class="mlabel">test-first · reviewable</span></div>
+                <div style="margin-top:6px"><span class="chip c-neutral"><span class="g">·</span>Arjun · junior</span></div>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="1.6" style="width:40px"></span></div>
+              <div class="node fitem" style="padding:22px 22px;border-color:var(--info)">
+                <div class="idx">POLICY GATE</div>
+                <div class="lb" style="font-size:25px">Evidence, limits, compatibility</div>
+                <div style="margin-top:6px"><span class="chip c-ok"><span class="g">✓</span>In scope</span></div>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="2.0" style="width:40px"></span></div>
+              <div class="node fitem" style="padding:22px 22px">
+                <div class="idx">RECOMMEND</div>
+                <div class="lb" style="font-size:25px">Apex-Standard</div>
+                <div style="margin-top:6px"><span class="chip c-info"><span class="g">i</span>Suggested</span></div>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="2.4" style="width:40px"></span></div>
+              <div class="node fitem" style="padding:22px 22px">
+                <div class="idx">ENGINEER</div>
+                <div class="lb" style="font-size:25px">Accepts the suggestion</div>
+                <div style="margin-top:6px"><span class="chip c-ok"><span class="g">✓</span>Accepted</span></div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:20px;margin-top:38px" data-at="3.4">
+              <div class="card on-cream" style="flex:1;padding:24px 26px">
+                <div class="mlabel">Start</div>
+                <div class="h2" style="font-size:46px;margin-top:8px">The task runs on company credentials.</div>
+                <div class="body" style="font-size:23px;margin-top:12px">
+                  One request, one model, one session — with the route, the reason and the approval
+                  reference written into the record.
+                </div>
+              </div>
+              <div class="card on-cream" style="width:640px;padding:24px 26px;border-color:var(--warn)" data-at="4.4">
+                <div class="mlabel" style="color:var(--warn)">If anything is missing</div>
+                <div class="h2" style="font-size:44px;margin-top:8px">Safe fallback.</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+                  <span class="chip c-warn"><span class="g">!</span>No evidence → fallback</span>
+                  <span class="chip c-warn"><span class="g">!</span>Low confidence → fallback</span>
+                  <span class="chip c-warn"><span class="g">!</span>Out of scope → fallback</span>
+                </div>
+                <div class="body" style="font-size:22px;margin-top:14px">
+                  Missing information never silently becomes a routing decision.
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:26px;display:flex;gap:14px;align-items:center" data-at="5.6">
+              <span class="chip c-info"><span class="g">i</span>Route logged with policy v1.3</span>
+              <span class="chip c-neutral"><span class="g">·</span>Start / stop controls stay with the engineer</span>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Every routed task passes a policy gate first — and when anything is
+              missing, Tarkado falls back instead of guessing.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 12 ============================ -->
+      <section class="clip scene" id="sc12" data-start="97.5" data-duration="11" data-track-index="12">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 12 · corrections append, policies are proposed<span>no silent retraining</span></div>
+          <div class="stage">
+            <div class="mlabel" data-at="0.4">Signals collected since A1 went live</div>
+            <div class="grid3" style="margin-top:16px" data-at="0.8" data-stagger="0.25">
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <span class="glyph g-warn">!</span><span class="mlabel">Senior override</span>
+                </div>
+                <div class="h-card" style="font-size:25px">Maya chose Apex-Premium</div>
+                <div class="body" style="font-size:21px;margin-top:8px">Reason recorded. The override stays a first-class data point.</div>
+              </div>
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <span class="glyph g-danger">✕</span><span class="mlabel">Failure</span>
+                </div>
+                <div class="h-card" style="font-size:25px">TASK-219 failed review</div>
+                <div class="body" style="font-size:21px;margin-top:8px">Kept at full weight — never averaged away.</div>
+              </div>
+              <div class="card on-cream" style="padding:20px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                  <span class="glyph g-warn">!</span><span class="mlabel">Compatibility reject</span>
+                </div>
+                <div class="h-card" style="font-size:25px">TASK-231 refused the route</div>
+                <div class="body" style="font-size:21px;margin-top:8px">Per-task rejection, not a blanket verdict.</div>
+              </div>
+            </div>
+
+            <div class="flow" style="margin-top:40px;align-items:center" data-at="3.0">
+              <div class="card on-cream fitem" style="padding:22px 24px">
+                <div class="mlabel">Policy in force</div>
+                <div class="h2" style="font-size:46px;margin-top:6px">v1.3</div>
+                <div style="margin-top:10px"><span class="chip c-info"><span class="g">i</span>Active</span></div>
+              </div>
+              <div style="display:flex;align-items:center;padding:0 18px">
+                <span class="conn-h" data-at="3.8" style="width:120px"></span>
+                <span class="mono" style="font-size:26px;color:var(--muted);margin-left:14px" data-at="4.0">▶</span>
+              </div>
+              <div class="card on-cream fitem" style="padding:22px 24px;border-color:var(--coral)">
+                <div class="mlabel" style="color:var(--coral)">Proposed change</div>
+                <div class="h2" style="font-size:46px;margin-top:6px">v1.4</div>
+                <div style="margin-top:10px"><span class="chip c-warn"><span class="g">!</span>Awaiting approval</span></div>
+              </div>
+              <div style="display:flex;align-items:center;padding:0 18px">
+                <span class="conn-h" data-at="4.4" style="width:120px"></span>
+                <span class="mono" style="font-size:26px;color:var(--muted);margin-left:14px" data-at="4.6">▶</span>
+              </div>
+              <div class="card fitem" style="padding:22px 24px;background:var(--tile-strong)">
+                <div class="mlabel">Designated senior</div>
+                <div class="h-card" style="font-size:30px;margin-top:8px">Approve · reject · amend</div>
+                <div style="margin-top:10px"><span class="chip c-neutral"><span class="g">·</span>Sam Ortiz</span></div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:14px;margin-top:34px" data-at="5.4" data-stagger="0.2">
+              <span class="chip c-ok"><span class="g">✓</span>Corrections append new rows</span>
+              <span class="chip c-danger"><span class="g">✕</span>No silent retraining</span>
+              <span class="chip c-neutral"><span class="g">·</span>Acceptance, use and outcome linked separately</span>
+              <span class="chip c-neutral"><span class="g">·</span>Every change carries a timestamp and an author</span>
+            </div>
+
+            <div class="card on-cream" style="margin-top:26px;padding:22px 26px" data-at="6.4">
+              <div class="body" style="font-size:24px;color:var(--ink)">
+                <i class="mark" style="color:var(--coral);font-style:normal">✱</i>
+                Nothing here retrains itself. The learning layer reads linked records; a person decides
+                whether policy changes.
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Senior overrides, failures and rejections become a proposed policy
+              change — approved by a person, never silently retrained.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ SCENE 13 ============================ -->
+      <section class="clip scene" id="sc13" data-start="108" data-duration="11" data-track-index="13">
+        <div class="travel">
+          <div class="ground"></div>
+          <div class="kicker" data-at="0.15"><i>&#10033;</i>Frame 13 · the whole chain<span>planned deployment workflow</span></div>
+          <div class="stage">
+            <div class="h2" data-at="0.5" data-y="24">One task, start to finish.</div>
+
+            <div class="flow" style="margin-top:36px;align-items:stretch" data-at="1.2" data-stagger="0.28">
+              <div class="node fitem" style="padding:20px 18px">
+                <div class="idx">01</div>
+                <div class="lb" style="font-size:24px">Engineer opens a task</div>
+                <span class="chip c-neutral" style="align-self:flex-start"><span class="g">·</span>OpenCode</span>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="2.4" style="width:26px"></span></div>
+              <div class="node fitem" style="padding:20px 18px">
+                <div class="idx">02</div>
+                <div class="lb" style="font-size:24px">Policy gate reads evidence</div>
+                <span class="chip c-info" style="align-self:flex-start"><span class="g">i</span>Policy v1.3</span>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="2.7" style="width:26px"></span></div>
+              <div class="node fitem" style="padding:20px 18px">
+                <div class="idx">03</div>
+                <div class="lb" style="font-size:24px">Recommendation issued</div>
+                <span class="chip c-info" style="align-self:flex-start"><span class="g">i</span>Suggested only</span>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="3.0" style="width:26px"></span></div>
+              <div class="node fitem" style="padding:20px 18px;border-color:var(--coral)">
+                <div class="idx">04</div>
+                <div class="lb" style="font-size:24px">Human decides</div>
+                <span class="chip c-warn" style="align-self:flex-start"><span class="g">!</span>Accept or reject</span>
+              </div>
+            </div>
+
+            <div class="flow" style="margin-top:20px;align-items:stretch" data-at="3.6" data-stagger="0.28">
+              <div class="node fitem" style="padding:20px 18px">
+                <div class="idx">05</div>
+                <div class="lb" style="font-size:24px">Runs on company credentials</div>
+                <span class="chip c-ok" style="align-self:flex-start"><span class="g">✓</span>Gateway managed</span>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="4.6" style="width:26px"></span></div>
+              <div class="node fitem" style="padding:20px 18px">
+                <div class="idx">06</div>
+                <div class="lb" style="font-size:24px">Evidence linked</div>
+                <span class="chip c-ok" style="align-self:flex-start"><span class="g">✓</span>Negatives kept</span>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="4.9" style="width:26px"></span></div>
+              <div class="node fitem" style="padding:20px 18px">
+                <div class="idx">07</div>
+                <div class="lb" style="font-size:24px">Outcome recorded</div>
+                <span class="chip c-warn" style="align-self:flex-start"><span class="g">!</span>Or stays unknown</span>
+              </div>
+              <div style="display:flex;align-items:center"><span class="conn-h" data-at="5.2" style="width:26px"></span></div>
+              <div class="node fitem" style="padding:20px 18px;border-color:var(--ok)">
+                <div class="idx">08</div>
+                <div class="lb" style="font-size:24px">Rollback loop</div>
+                <span class="chip c-ok" style="align-self:flex-start"><span class="g">✓</span>Reversible, history kept</span>
+              </div>
+            </div>
+
+            <div style="margin-top:34px;display:flex;gap:26px;align-items:center" data-at="6.0">
+              <div class="card on-cream" style="flex:1;padding:24px 26px">
+                <div class="mlabel">The rule that holds it together</div>
+                <div class="h2" style="font-size:46px;margin-top:8px">Evidence, compatibility, confidence —<br />otherwise safe fallback.</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span class="chip c-info"><span class="g">i</span>Shadow mode first</span>
+                <span class="chip c-warn"><span class="g">!</span>Acceptance ≠ success ≠ approval</span>
+                <span class="chip c-ok"><span class="g">✓</span>Rollback always retained</span>
+              </div>
+            </div>
+
+            <div style="margin-top:26px;display:flex;gap:14px;align-items:center" data-at="7.0">
+              <span class="mlabel" style="color:var(--coral)">Illustrative simulation</span>
+              <span class="body" style="font-size:22px">Fictional company, tasks, reviewers, models, limits and outcomes — no backend, no model calls, no production savings claim.</span>
+            </div>
+          </div>
+          <div class="cap">
+            <div class="rule" data-at="1.0"></div>
+            <div class="txt" data-at="1.1">
+              <i class="mark">✱</i>Input, policy, recommendation, a human decision, company credentials,
+              linked evidence — and a rollback waiting at the end of it.
+            </div>
+          </div>
+        </div>
+      </section>
+      <!--SCENES-->
+    </div>
+    <script>
+      /* ---------------------------------------------------------------
+         One paused, seek-safe timeline. Every tween uses fromTo (or set)
+         so that seeking to any time renders the same result.
+      --------------------------------------------------------------- */
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
+
+      const SCENES = [
+        { id: "sc1",  s: 0,     d: 9.5, kind: "cut"  },
+        { id: "sc2",  s: 8.5,   d: 10,  kind: "push" },
+        { id: "sc3",  s: 18,    d: 8,   kind: "push" },
+        { id: "sc4",  s: 25.5,  d: 9,   kind: "fade" },
+        { id: "sc5",  s: 34,    d: 10,  kind: "fade" },
+        { id: "sc6",  s: 43.5,  d: 10,  kind: "fade" },
+        { id: "sc7",  s: 53,    d: 9,   kind: "push" },
+        { id: "sc8",  s: 61.5,  d: 8,   kind: "fade" },
+        { id: "sc9",  s: 69,    d: 11,  kind: "push" },
+        { id: "sc10", s: 79.5,  d: 10,  kind: "fade" },
+        { id: "sc11", s: 89,    d: 9,   kind: "fade" },
+        { id: "sc12", s: 97.5,  d: 11,  kind: "fade" },
+        { id: "sc13", s: 108,   d: 11,  kind: "fade" }
+      ];
+
+      SCENES.forEach(function (sc) {
+        const root = document.getElementById(sc.id);
+        if (!root) return;
+        const base = sc.s;
+        const travel = root.querySelector(".travel");
+
+        /* --- scene entrance: the transition itself ---------------------- */
+        if (sc.kind === "push") {
+          tl.fromTo(travel, { xPercent: 100 },
+            { xPercent: 0, duration: 0.68, ease: "power3.inOut" }, base);
+        } else if (sc.kind === "fade") {
+          tl.fromTo(travel, { autoAlpha: 0 },
+            { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, base);
+        } else {
+          tl.fromTo(travel, { autoAlpha: 0 },
+            { autoAlpha: 1, duration: 0.2, ease: "none" }, base);
+        }
+
+        /* --- staged reveals: data-at on the element, seconds from start - */
+        root.querySelectorAll("[data-at]").forEach(function (el) {
+          const at = base + parseFloat(el.getAttribute("data-at"));
+
+          if (el.hasAttribute("data-stagger")) {
+            tl.fromTo(el.children,
+              { autoAlpha: 0, y: 18 },
+              { autoAlpha: 1, y: 0, duration: 0.5, ease: "power3.out",
+                stagger: parseFloat(el.getAttribute("data-stagger")) }, at);
+            return;
+          }
+
+          if (el.classList.contains("conn-h") || el.classList.contains("conn-d")) {
+            tl.fromTo(el, { scaleX: 0, autoAlpha: 1 },
+              { scaleX: 1, autoAlpha: 1, duration: 0.5, ease: "power2.out" }, at);
+            return;
+          }
+          if (el.classList.contains("conn-v")) {
+            tl.fromTo(el, { scaleY: 0, autoAlpha: 1 },
+              { scaleY: 1, autoAlpha: 1, duration: 0.4, ease: "power2.out" }, at);
+            return;
+          }
+
+          tl.fromTo(el,
+            { autoAlpha: 0, y: parseFloat(el.getAttribute("data-y") || "16") },
+            { autoAlpha: 1, y: 0,
+              duration: parseFloat(el.getAttribute("data-d") || "0.55"),
+              ease: "power3.out" }, at);
+        });
+
+        /* --- typing: a clip-path wipe that reads as keystrokes --------- */
+        root.querySelectorAll("[data-type]").forEach(function (el) {
+          tl.fromTo(el,
+            { clipPath: "inset(0 100% 0 0)", autoAlpha: 1 },
+            { clipPath: "inset(0 0% 0 0)", autoAlpha: 1,
+              duration: 1.1, ease: "none" },
+            base + parseFloat(el.getAttribute("data-type")));
+        });
+      });
+
+      /* --- scene 05: reviewer cursor press ------------------------------ */
+      (function () {
+        const cur = document.getElementById("cur5");
+        const base = 34;
+        if (cur) {
+          tl.fromTo(cur, { autoAlpha: 0, x: 1520, y: 545 },
+            { autoAlpha: 1, x: 1520, y: 545, duration: 0.01 }, base + 2.5);
+          tl.fromTo(cur, { x: 1520, y: 545 },
+            { x: 856, y: 230, duration: 0.95, ease: "power2.inOut",
+              immediateRender: false }, base + 2.6);
+          tl.fromTo(cur, { x: 856, y: 230, scale: 1 },
+            { x: 856, y: 230, scale: 0.88, duration: 0.1, yoyo: true,
+              repeat: 1, ease: "power2.out", immediateRender: false }, base + 3.6);
+          tl.fromTo("#s5accept", { scale: 1 },
+            { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1,
+              ease: "power2.out" }, base + 3.6);
+          tl.fromTo(cur, { x: 856, y: 230 },
+            { x: 1470, y: 560, duration: 0.8, ease: "power2.inOut",
+              immediateRender: false }, base + 4.6);
+          tl.fromTo(cur, { autoAlpha: 1 },
+            { autoAlpha: 0, duration: 0.3, ease: "power2.in",
+              immediateRender: false }, base + 5.6);
+        }
+      })();
+
+      /* --- scene 07: budget meter draws ------------------------------- */
+      tl.fromTo("#s7bar", { scaleX: 0 },
+        { scaleX: 1, duration: 1.0, ease: "power2.out" }, 53 + 4.7);
+
+      /* --- hold the final frame out to the root data-duration (119s) ---- */
+      tl.to({}, { duration: 3.45, ease: "none" }, 115.55);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

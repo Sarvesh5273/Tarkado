@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tarkado — planned deployment workflow (illustrative simulation)</title>
+    <link rel="icon" href="data:," />
+    <script src="vendor/hyperframes-player.global.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html, body { height: 100%; }
+
+      body {
+        background: #121110;
+        color: #faf9f5;
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* ---------------- header ---------------- */
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 22px;
+        padding: 16px 26px 12px;
+        border-bottom: 1px solid rgba(250, 249, 245, 0.12);
+        flex: none;
+      }
+
+      .brand {
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .brand i { color: #cc785c; font-style: normal; margin-right: 9px; }
+
+      .tagline {
+        font-size: 15px;
+        color: #b6ada2;
+        letter-spacing: 0.04em;
+      }
+
+      .tagline b { color: #cc785c; font-weight: 400; }
+
+      .hdr-right {
+        margin-left: auto;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #8b8378;
+      }
+
+      /* ---------------- stage ---------------- */
+      .stagewrap {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: grid;
+        place-items: center;
+        padding: 18px 26px;
+      }
+
+      .stage {
+        position: relative;
+        width: min(100%, calc((100vh - 250px) * 1.7778));
+        aspect-ratio: 16 / 9;
+        background: #000;
+        border: 1px solid rgba(250, 249, 245, 0.14);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+      }
+
+      hyperframes-player {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .notice {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        gap: 10px;
+        text-align: center;
+        font-size: 15px;
+        color: #b6ada2;
+        background: #181715;
+        padding: 40px;
+      }
+
+      .notice[hidden] { display: none; }
+
+      /* ---------------- transport ---------------- */
+      .transport {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 26px;
+        border-top: 1px solid rgba(250, 249, 245, 0.12);
+        background: #171614;
+      }
+
+      button {
+        font: 700 13px/1 "JetBrains Mono", ui-monospace, monospace;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #faf9f5;
+        background: transparent;
+        border: 1px solid rgba(250, 249, 245, 0.3);
+        border-radius: 6px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+
+      button:hover { background: rgba(250, 249, 245, 0.1); border-color: #faf9f5; }
+
+      button:focus-visible { outline: 2px solid #cc785c; outline-offset: 2px; }
+
+      button.primary { background: #cc785c; border-color: #cc785c; color: #171614; }
+
+      button.primary:hover { background: #e08a6b; border-color: #e08a6b; }
+
+      .clock {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 14px;
+        letter-spacing: 0.06em;
+        color: #b6ada2;
+        min-width: 108px;
+      }
+
+      .clock b { color: #faf9f5; font-weight: 700; }
+
+      #seek {
+        flex: 1 1 auto;
+        appearance: none;
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(to right, #cc785c var(--p, 0%), rgba(250, 249, 245, 0.18) var(--p, 0%));
+        cursor: pointer;
+      }
+
+      #seek::-webkit-slider-thumb {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #faf9f5;
+        border: 3px solid #cc785c;
+        cursor: grab;
+      }
+
+      #seek::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #faf9f5;
+        border: 3px solid #cc785c;
+        cursor: grab;
+      }
+
+      .state {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #8b8378;
+        min-width: 78px;
+        text-align: right;
+      }
+
+      /* ---------------- scene navigation ---------------- */
+      .scenes {
+        flex: none;
+        display: flex;
+        gap: 6px;
+        padding: 0 26px 16px;
+        overflow-x: auto;
+        background: #171614;
+        scrollbar-width: thin;
+      }
+
+      .scenes button {
+        flex: 1 1 0;
+        min-width: 94px;
+        padding: 10px 9px 9px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        border-color: rgba(250, 249, 245, 0.18);
+        color: #b6ada2;
+      }
+
+      .scenes button .n {
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        color: #8b8378;
+      }
+
+      .scenes button .l {
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: none;
+        color: #d8d2c8;
+        line-height: 1.25;
+      }
+
+      .scenes button:hover { border-color: rgba(250, 249, 245, 0.45); }
+
+      .scenes button.on {
+        border-color: #cc785c;
+        background: rgba(204, 120, 92, 0.14);
+      }
+
+      .scenes button.on .n { color: #cc785c; }
+
+      .scenes button.on .l { color: #faf9f5; }
+
+      @media (max-width: 1100px) {
+        .scenes button { min-width: 92px; }
+        .tagline { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand"><i>&#10033;</i>Tarkado</div>
+      <div class="tagline">Planned deployment workflow <b>· illustrative simulation</b></div>
+      <div class="hdr-right">16:9 · 1920×1080 · silent</div>
+    </header>
+
+    <main class="stagewrap">
+      <div class="stage">
+        <hyperframes-player
+          id="player"
+          src="index.html"
+          runtime-src="vendor/hyperframe.runtime.iife.js"
+        ></hyperframes-player>
+        <div class="notice" id="notice">
+          <div><b>Loading the composition…</b></div>
+          <div>If this message stays, serve the folder over HTTP and reload.</div>
+        </div>
+      </div>
+    </main>
+
+    <div class="transport">
+      <button class="primary" id="toggle">&#9654; Play</button>
+      <button id="replay">&#8634; Replay</button>
+      <span class="clock"><b id="cur">0:00</b> / <span id="tot">1:59</span></span>
+      <input id="seek" type="range" min="0" max="119" step="0.05" value="0" aria-label="Seek timeline" />
+      <span class="state" id="state">loading</span>
+    </div>
+
+    <nav class="scenes" id="scenes" aria-label="Scene navigation"></nav>
+
+    <script>
+      const DURATION = 119;
+      const SCENES = [
+        { s: 0,     n: "01", l: "Where it starts" },
+        { s: 8.5,   n: "02", l: "One new task" },
+        { s: 18,    n: "03", l: "Strip → task panel" },
+        { s: 25.5,  n: "04", l: "The dashboard" },
+        { s: 34,    n: "05", l: "A human decides" },
+        { s: 43.5,  n: "06", l: "No silent switching" },
+        { s: 53,    n: "07", l: "Credit attribution" },
+        { s: 61.5,  n: "08", l: "Evidence ledger" },
+        { s: 69,    n: "09", l: "Pilot readiness" },
+        { s: 79.5,  n: "10", l: "Bounded routing" },
+        { s: 89,    n: "11", l: "Task enters routing" },
+        { s: 97.5,  n: "12", l: "Corrections append" },
+        { s: 108,   n: "13", l: "The whole chain" }
+      ];
+
+      const player = document.getElementById("player");
+      const toggle = document.getElementById("toggle");
+      const replay = document.getElementById("replay");
+      const seek = document.getElementById("seek");
+      const cur = document.getElementById("cur");
+      const tot = document.getElementById("tot");
+      const state = document.getElementById("state");
+      const notice = document.getElementById("notice");
+      const scenesNav = document.getElementById("scenes");
+
+      let duration = DURATION;
+      let scrubbing = false;
+      let wasPlaying = false;
+
+      function fmt(t) {
+        t = Math.max(0, t || 0);
+        const m = Math.floor(t / 60);
+        const s = Math.floor(t % 60);
+        return m + ":" + String(s).padStart(2, "0");
+      }
+
+      /* ---- scene buttons ---- */
+      const sceneButtons = SCENES.map(function (sc, i) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.innerHTML = '<span class="n">FRAME ' + sc.n + '</span><span class="l">' + sc.l + "</span>";
+        b.addEventListener("click", function () {
+          player.seek(sc.s);
+          player.play();
+        });
+        scenesNav.appendChild(b);
+        return b;
+      });
+
+      function activeSceneIndex(t) {
+        let idx = 0;
+        for (let i = 0; i < SCENES.length; i++) if (t + 0.001 >= SCENES[i].s) idx = i;
+        return idx;
+      }
+
+      function paint(t) {
+        cur.textContent = fmt(t);
+        if (!scrubbing) {
+          seek.value = String(t);
+          seek.style.setProperty("--p", (t / duration) * 100 + "%");
+        }
+        const idx = activeSceneIndex(t);
+        sceneButtons.forEach(function (b, i) {
+          b.classList.toggle("on", i === idx);
+        });
+      }
+
+      function refreshToggle() {
+        const p = player.paused;
+        toggle.innerHTML = p ? "&#9654; Play" : "&#10074;&#10074; Pause";
+      }
+
+        /* ---- player events ---- */
+      let booted = false;
+
+      function onReady() {
+        notice.hidden = true;
+        state.textContent = player.paused ? "paused" : "playing";
+        if (player.duration && player.duration > 0) {
+          duration = player.duration;
+          tot.textContent = fmt(duration);
+          seek.max = String(duration);
+        }
+        if (!booted) {
+          booted = true;
+          try { player.play(); } catch (e) { /* user can press Play */ }
+        }
+        refreshToggle();
+      }
+
+      player.addEventListener("ready", onReady);
+      player.addEventListener("runtimedataapplied", onReady);
+      player.addEventListener("durationchange", function (e) {
+        const d = e.detail && (e.detail.duration || e.detail.value);
+        if (d && d > 0) {
+          duration = d;
+          tot.textContent = fmt(d);
+          seek.max = String(d);
+        }
+      });
+
+      player.addEventListener("timeupdate", function (e) {
+        notice.hidden = true;
+        const t = (e.detail && e.detail.currentTime) || 0;
+        if (player.duration && player.duration > 0) duration = player.duration;
+        tot.textContent = fmt(duration);
+        seek.max = String(duration);
+        state.textContent = player.paused ? "paused" : "playing";
+        paint(t);
+        refreshToggle();
+      });
+
+      player.addEventListener("ended", function () {
+        state.textContent = "ended";
+        refreshToggle();
+      });
+
+      player.addEventListener("error", function (e) {
+        notice.hidden = false;
+        notice.innerHTML =
+          "<div><b>The player could not start.</b></div><div>" +
+          ((e.detail && e.detail.message) || "Unknown error") +
+          "</div>";
+        state.textContent = "error";
+      });
+
+      /* ---- transport ---- */
+      toggle.addEventListener("click", function () {
+        notice.hidden = true;
+        if (player.paused) player.play();
+        else player.pause();
+        refreshToggle();
+      });
+
+      replay.addEventListener("click", function () {
+        player.seek(0);
+        player.play();
+      });
+
+      seek.addEventListener("pointerdown", function () {
+        scrubbing = true;
+        wasPlaying = !player.paused;
+        if (wasPlaying) player.pause();
+      });
+
+      seek.addEventListener("input", function () {
+        const t = parseFloat(seek.value);
+        seek.style.setProperty("--p", (t / duration) * 100 + "%");
+        cur.textContent = fmt(t);
+        paint(t);
+      });
+
+      function endScrub() {
+        if (!scrubbing) return;
+        scrubbing = false;
+        player.seek(parseFloat(seek.value));
+        if (wasPlaying) player.play();
+        refreshToggle();
+      }
+
+      seek.addEventListener("pointerup", endScrub);
+      seek.addEventListener("change", endScrub);
+
+      /* ---- keyboard ---- */
+      function jump(t) {
+        const playing = !player.paused;
+        player.seek(Math.max(0, Math.min(duration, t)));
+        if (playing) player.play();
+        refreshToggle();
+      }
+
+      document.addEventListener("keydown", function (e) {
+        if (e.target && e.target.tagName === "INPUT") return;
+        const t = player.currentTime || 0;
+        if (e.code === "Space") {
+          e.preventDefault();
+          if (player.paused) player.play();
+          else player.pause();
+          refreshToggle();
+        } else if (e.code === "ArrowRight") {
+          jump(t + 5);
+        } else if (e.code === "ArrowLeft") {
+          jump(t - 5);
+        } else if (e.code === "Home") {
+          jump(0);
+        } else if (/^Digit[1-9]$/.test(e.code)) {
+          const i = Number(e.code.slice(5)) - 1;
+          if (SCENES[i]) jump(SCENES[i].s);
+        }
+      });
+
+      /* ---- boot ---- */
+      tot.textContent = fmt(duration);
+      seek.max = String(duration);
+      paint(0);
+      refreshToggle();
+
+      if (!customElements.get("hyperframes-player")) {
+        notice.hidden = false;
+        notice.innerHTML =
+          "<div><b>Player script failed to load.</b></div>" +
+          "<div>Check that vendor/hyperframes-player.global.js exists next to this file.</div>";
+      }
+    </script>
+  </body>
+</html>
