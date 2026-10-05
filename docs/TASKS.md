@@ -1,5 +1,20 @@
 # Tarkado Build Roadmap
 
+## Publication batch — owner requested 2026-10-05
+
+The owner explicitly authorized publishing reviewed project code to the existing
+public GitHub repository, superseding the prior licence-dependent no-push instruction.
+No Tarkado licence is selected. Keep historical commits intact and make separate
+remaining-documentation, demo and publication-control commits. Prior no-push/uncommitted
+notes below are historical milestones, not current publication restrictions.
+
+Private stores, credentials, environments, backups, raw authoring captures and local
+generation state remain excluded. Demo screens are fictional reconstructions, not
+private product/session captures. Preserve third-party notices for bundled assets.
+This is publication, not model execution, plugin installation or production activation.
+Latest implementation verification: 880 Python / 47 JavaScript tests; a consistent-
+source regression run is underway before this push. Test counts are not readiness.
+
 ## Completion goal — First end-to-end Tarkado build
 
 **Requested by the owner:** 2026-10-03.
@@ -151,7 +166,7 @@ active pilot becomes paused and its guard blocked before a provider attempt.
 - [x] Verify accepted tasks reach the controlled provider; add adverse authority,
   budget, failure/unknown/gap/mismatch, response-retry and next-review regressions.
 - [x] Finish full verification and update operating/decision docs.
-- [ ] Make a separate logical local commit; do not push.
+- [x] Make a separate logical local commit; do not push (`5f34fba`).
 
 Reviewed policy/learner/evidence/approval and source hashes are not rewritten;
 there is no retraining, threshold change, scope expansion, success label or pilot
@@ -169,6 +184,8 @@ Python also invokes JavaScript, so these are not independent certifications.
 assertion was weakened; no installation, private session/store access, real
 provider call, automatic retraining or public push occurred. Tool-coding support
 and installed-host/provider validation remain separate, unfinished work.
+All ten earlier local commits and the original uncommitted handoff/decision/task
+updates are preserved; only this correction's documentation hunks were staged.
 
 ### Bounded local-function coding support — 2026-10-04
 
@@ -183,7 +200,7 @@ OpenAI token/function docs, LiteLLM and official OpenCode V2 documentation.
 - [x] Exercise the actual adapter with controlled provider tool-call responses,
   isolated file read/edit/unit tests, adverse cases and metadata privacy.
 - [x] Document schema-2 handoff, narrow support and separate missing/validation work.
-- [ ] Make a separate logical local commit; no public push.
+- [x] Make a separate logical local commit; no public push (`76fdbca`).
 
 No new coding tool runner or generic gateway. Existing OpenCode owns reviewed
 local tool execution/permissions; every model continuation still uses the bound
@@ -204,6 +221,9 @@ verifier evidence are required; the fixture's `run_tests` is not an installed
 OpenCode tool. Actual host/tool/pricing/invoice/quality and deployment validation
 remain separately deferred. See [FUNCTION_CODING.md](FUNCTION_CODING.md). No installs,
 plugin loading, private-session/store access, real provider calls or push occurred.
+All eleven earlier local commits and original uncommitted handoff/decision/task
+updates remain preserved. Only this batch's documentation hunks were staged; no
+private stores, keys, environments, backups or real task data were accessed/staged.
 
 ### Metadata-only local-tool capture — 2026-10-04
 
@@ -226,7 +246,7 @@ All existing authority, model, budget and provider/negative vetoes remain.
 - [x] Join monitoring/category/publication/current-bound repair checks without
   fabricating final human outcomes or rewriting reviewed artifacts.
 - [x] Add privacy/linkage/status/gap/retry/admission regressions and operating docs.
-- [ ] Make a separate logical local commit; no installs, private access or push.
+- [x] Make a separate logical local commit; no installs, private access or push (`1a072c6`).
 
 Implemented additive tool-status records, native generic before/after projection,
 optional reviewed structured negatives and an explicitly approved collection list
@@ -262,6 +282,10 @@ or public push occurred. Generic native capture is implemented; finer native
 permission/cancellation/test/provider-attempt attribution remains unsupported unless
 the reviewed structured tool contract supplies its explicit status. Actual installed
 OpenCode hook/peer/tool validation remains separately deferred.
+All twelve earlier local commits remain unchanged. The original uncommitted
+handoff/decision/task work is preserved; only this feature's documentation hunks
+were staged. No private stores, keys, credentials, environments or backups were
+accessed or staged. Nothing was pushed.
 
 ### Remaining build packages, in execution order
 
@@ -270,10 +294,10 @@ OpenCode hook/peer/tool validation remains separately deferred.
 | B-01 | Scoped pilot runtime | Persistent active/paused/revoked pilot state; exact policy/scope checks; new-task decisions; task/budget accounting; overrides; safe fallback; rollback and decision records. | Build locally first. Local receipts can authorize simulation only, never live requests. |
 | B-02 | Company setup and trusted authorization | Manage permitted developers/roles, approved models, collection scope, and designated senior/admin authority; authenticate and revoke pilot approvals tied to exact policy/scope. | Implementation complete for the agreed authorization mechanics. Actual accounts/MFA, recovery, company serving, and conditional live scope approval are tested. The readiness verifier defaults to refusal; real evidence, adapter integration, and deployment validation remain separate gates. |
 | B-03 | Developer/admin workflow interface | A usable way to see recommendations, accept/reject per task, record actual models/results, review category evidence, approve a limited pilot, and inspect/reverse its state. | Implementation complete and verified on the existing Django browser/templates (UI-01–UI-03). Guided selectors, separate evidence/scope review, confirmations, readable history/accounting, and owned settlement reuse B-02/B-01 authority without JSON/internal-ID copying. Observation/outcomes remain manual; the connector is separately B-04. |
-| B-04 | Task-level OpenCode integration | Documented task/run/subagent admission scope; metadata capture, deduplication, gap/error handling, and visible manual recommendations across participating developers. | Limited explicit-root-task connector/API and inactive OpenCode server/CLI plugin source implemented. Installed-host/terminal loading and approved real-session validation remain unverified; subagent/new-run and exact per-request usage are not claimed. B-04 is not marked fully complete. No Laya or model switching. |
-| B-05 | Integrated learning and pilot selection | Feed actual task feedback/results into versioned learning; show category readiness; after separate trusted approval select models only for eligible new tasks and preserve overrides. | Learner publication/future browser-connector suggestions and conditional live-scope selection/accounting are built and regression-tested. Readiness/admission remain default-denying. Missing atomic OpenCode/gateway task-model-provider-cap delivery is unfinished software, not merely deferred validation; B-05 is not fully complete. |
-| B-06 | Monitoring, privacy, and operational delivery | Continued company-wide monitoring with senior feedback prioritized; quality/override/failure signals; retention controls; revocation and rollback; install/start instructions and one joined workflow demonstration. | Existing pattern checks are not comprehensive protection. Operational guarantees and supported environments must be stated honestly. |
-| B-07 | Stable policy handoff | A stable versioned export contract and a documented first existing-tool/gateway handoff, with unsupported capabilities/combinations made explicit. | Research the selected integration before implementation. Do not replace the existing request transport or infer provider credentials. |
+| B-04 | Task-level OpenCode integration | Documented task/run/subagent admission scope; metadata capture, deduplication, gap/error handling, and visible manual recommendations across participating developers. | Limited observer plus separate inactive fresh-root coordinator/RPC, guided delivery terminal source/package and linked gateway usage are built. Actual terminal/peer loading, automatic subagent/new-run attribution and installed-host/real-session validation remain pending. B-04 is not fully complete. No Laya or active-task switching. |
+| B-05 | Integrated learning and pilot selection | Feed actual task feedback/results into versioned learning; show category readiness; after separate trusted approval select models only for eligible new tasks and preserve overrides. | Existing learning/authority is preserved. Narrow text-only and bounded local-function envelopes, exact binding, shared physical/continuation reservations, complete/unknown settlement and explicit startup wiring are implemented with controlled-host/provider tests. Unrestricted shell/remote tool boundaries, automatic tool-outcome capture, broader continuous feedback and known-cost corrections remain missing software; real verifier/tool-host validation remains separate and default-denying. B-05 is not fully complete. |
+| B-06 | Monitoring, privacy, and operational delivery | Continued company-wide monitoring with senior feedback prioritized; quality/override/failure signals; retention controls; revocation and rollback; install/start instructions and one joined workflow demonstration. | Joined dashboard alerts, non-destructive collection pause/manual retention reminder, gateway identity controls, delivery rollback/accounting, explicit startup loaders and controlled walkthrough are built. External notifications/supervision and real operator validation remain pending. No destructive retention policy is chosen. |
+| B-07 | Stable policy handoff | A stable versioned export contract and a documented first existing-tool/gateway handoff, with unsupported capabilities/combinations made explicit. | Schema-1 text and schema-2 local-function exact policy/learner/scope/model-envelope handoff/refusal validation are built for the accepted path. Legacy contracts remain supported. Exports carry no provider secrets or portable live authority; actual host/cost/tool compatibility remains unverified. |
 
 Existing local records, learner, reports, privacy checks, audits, and policy
 history are foundations for these packages—not reasons to rebuild them or count
@@ -283,10 +307,225 @@ B-04 connector code now exists for a limited explicit-task scope; its installed
 host/terminal and real-session validation remain pending. Deployment/evidence gates
 below remain separate and unsatisfied. No plugin installation or private access occurred.
 
-**Session handoff:** the owner requested implementing B-03 in a fresh session.
-Read [HANDOFF_B03.md](HANDOFF_B03.md) for the accepted UI direction, current code/
-tests, usability goals, and preserved access/deployment limits. No B-03 UI rebuild
-or connector implementation was started by preparing this handoff.
+**Current session handoff (2026-10-04):** continue the missing delivery adapter,
+then remaining B-04/B-05 integration, B-06, and B-07 from
+[HANDOFF_DELIVERY.md](HANDOFF_DELIVERY.md). The accepted reference path is
+**OpenCode V2 → existing LiteLLM Proxy → company-managed OpenAI API**. Build the
+real narrow adapter; initially exercise it with a controlled fake provider, not
+paid/private calls. No gateway/dependency is installed or real integration claimed.
+[HANDOFF_B03.md](HANDOFF_B03.md) is retained as historical context; B-03 is complete.
+
+### Next build — accepted delivery reference path
+
+#### Terminal/startup implementation — started 2026-10-04
+
+Owner requested continuing the remaining build. Baseline rerun before edits:
+**725 Python / 26 JavaScript tests pass**; `git diff --check` passes. Preserve all
+nine local commits, the original uncommitted handoff files and private stores.
+
+- [x] Add guided inactive delivery terminal commands/panel with explicit new-task
+  creation, overrides, budget/usage views and separate human feedback.
+- [x] Package the delivery server/terminal entrypoints coherently without changing
+  the default observer or loading a plugin into this session.
+- [x] Add explicit reviewed company-verifier and existing-LiteLLM callback startup
+  wiring; preserve default refusal, credential privacy and human approval.
+- [x] Test joined terminal/API/startup adverse paths with controlled hosts/providers
+  and document remaining installed-host validation separately.
+- [ ] Continue justified tool-coding request support after this narrow joined flow.
+
+No dependency installation, plugin activation, private-session access, actual
+provider call or public push is authorized/performed by these build steps.
+
+**Terminal source implemented:** separate local delivery package exposes guided
+scope/category/original-model/override/context/output/task-budget confirmation,
+creates only a fresh root, shows complete usage/unknown obligations and reuses
+separate human feedback/result actions. Metadata-only choice/state endpoints are
+scoped to the existing owner/repository delegation. Duplicate task starts and
+exact close retries preserve history. Source remains inactive; installed TSX/peer
+rendering and host behavior still need separately approved validation.
+
+**Startup wiring implemented:** company service can explicitly load one reviewed
+factory module whose private manifest binds exact company/deployment/source bytes;
+typed independent verifiers are installed without activating any pilot. Default
+startup remains refusing. Existing LiteLLM has a dotted callback-instance entrypoint
+with strict private configuration and separately stored scoped machine credential.
+No provider keys are discovered or copied. These source loaders have not been run
+against owner configuration or installed LiteLLM; actual code-loading needs approval.
+Focused tests cover guided creation/cancellation/route changes, explicit code
+loading, wrong-company/source changes, private files, typed verifier refusal and
+usage projection. A real Node coordinator → actual loopback Django metadata API
+test joins scope discovery/start/claim/binding/state without installed OpenCode,
+prompt submission or provider execution. Controlled host tests are not TSX/runtime
+or actual LiteLLM installation verification.
+Operator setup, private-manifest/credential formats, separate package loading and
+honest runtime/freshness limits are in [DELIVERY_STARTUP.md](DELIVERY_STARTUP.md).
+
+**Terminal/startup verification:** **737 Python tests / 33 JavaScript tests pass**
+(all 725 Python / 26 JS baseline retained; 12 new Python and seven new JS checks).
+`git diff --check` passes; no assertions weakened. Python also invokes JS tests,
+so counts are not independent certifications. Controlled-host/source and real
+loopback metadata HTTP checks are not actual OpenCode TSX or LiteLLM-host validation.
+Normal tool-coding support is the next implementation step, not silently marked
+complete. No real provider calls, dependency/plugin loading, owner-store migration,
+credential/private-session inspection or public push occurred.
+Local terminal/startup commit: `0120a6b` (no push). The nine prior local commits
+remain unchanged; original handoff/decision/roadmap files, including these task
+updates, remain uncommitted. Only reviewed project source/tests/docs were staged.
+
+#### Owner review fixes — 2026-10-04
+
+Baseline rerun before edits: **705 Python / 26 JavaScript tests pass**. Preserve
+the eight existing local commits, uncommitted handoff work and private stores.
+Update this section after each implementation, not only at the end.
+
+- [x] Link retained delivery failures/unknown obligations to publication freshness,
+  future suggestions and category evidence review without inventing task outcomes.
+- [x] Validate nested policy-export learner/scope/identity/diagnostic contracts,
+  including modified content whose hashes have been recalculated.
+- [x] Handle simulation-pilot export explicitly without a live-record assumption
+  or any conversion into live authority.
+
+These fixes do not complete text-only delivery's missing terminal/startup wiring
+or normal tool-coding support. Installed LiteLLM/OpenCode and real-provider/company
+validation remain separately deferred; no installation, private access or push.
+
+**Fix 1 implemented:** company review now binds validated gateway request/attempt
+history alongside connector diagnostics. Publication/current-scope checks see new
+failures and unknown obligations; future suggestions use the safe fallback.
+Category reports retain all same-source developers' delivery signals, even outside
+the fitting-session subset, and block affected categories. Later cost reconciliation
+does not erase earlier failures. No gateway completion becomes a human outcome or
+new positive training example. Regression checks are in `tests/test_delivery_review.py`.
+Five focused learning regressions pass: timeout/fallback, unchanged positive counts,
+excluded-session failures, late billing reconciliation and known same-task retry.
+Known retryable failures block new tasks/suggestions but preserve the original
+already-bound request's separately reserved retry; unknown costs get no exception.
+
+**Fix 2 implemented:** the handoff checker reuses `LearnedModel` and `PilotScope`
+validation, binds the learner to the exported policy, checks canonical identifiers
+and positive limits, and refuses invalid model rules, nested shapes and omitted
+unknown-envelope diagnostics even when all hashes are recalculated. No portable
+approval is added: well-formed exported metadata still cannot authenticate an
+arbitrary claimed company scope or independently verify its source evidence.
+Six focused export-check regressions pass, including recalculated nested hashes,
+invalid category/developer/budget scopes, malformed shapes and mismatched policies.
+
+**Fix 3 implemented:** simulation handoff reads the validated local receipt's
+scope and reviewed policy, explicitly labels the copy simulation-only and leaves
+all live provider envelopes unavailable. It cannot activate a conditional runtime.
+Malformed stored exports return a bounded HTTP 400 refusal without exposing or
+resetting history. Live scopes still follow their separate stored structure and
+authority checks. Active/rejected simulation and protected HTTP regressions added.
+The existing offline report verifier remains unchanged. Company simulation
+receipts independently check the baseline and retain the additional validated
+delivery diagnostics; blocked categories still cannot be approved, while an
+explicit rejection and a healthy simulation review remain usable. Export coverage
+also checks aggregate training-count consistency, not hashes alone.
+Adverse-delivery coverage includes missing usage, wrong actual model and provider
+cost/token-bound overruns, with complete known costs and unknown reservations
+preserved. These are synthetic contract checks, not provider-billing validation.
+
+**Review-fix verification:** all three owner reports were reproduced first: two
+failed assertions (published learner stayed current; rehashed invalid rules passed)
+and the simulation export's `KeyError: policy`. The fixes retain those regression
+assertions and all existing tests. Final foreground verification: **725 Python
+tests / 26 JavaScript tests pass** (705 Python baseline + 20 new owner-review
+regressions); `git diff --check` passes. The Python suite also invokes JavaScript,
+so these are not independent certifications. No migration/dependency/plugin load,
+private-session access, real provider call, data reset or public push occurred.
+Terminal/startup wiring, normal tool-coding support and installed-host/provider
+validation remain incomplete and separately tracked above.
+Local review-fix commit: `9633f60` (no push). All eight prior local commits remain
+unchanged. The original handoff/decision/roadmap files and these task-status updates
+remain uncommitted; private stores, environments, credentials and backups were not
+read, staged or modified.
+
+**Owner accepted:** 2026-10-04, after the execution-path explanation and agreement
+to use a fake provider for initial integration tests. **Status:** narrow conditional
+adapter/source, supported usage/accounting, monitoring/privacy and versioned handoff
+are now implemented; installed-host/real-provider validation is not performed.
+The full build is still incomplete. See [DELIVERY_REFERENCE.md](DELIVERY_REFERENCE.md)
+for implemented scope, missing software and separately deferred validation.
+
+- [x] Research primary OpenCode V2, LiteLLM hooks/budget coordination, and provider
+  spend-control documentation; explain tradeoffs and obtain reference-path agreement.
+- [x] Recover the handoff and rerun the 671-test Python / 19-test JavaScript baseline
+  against a consistent code snapshot before editing; do not edit migrations during tests.
+- [x] Implement the narrow conditional LiteLLM adapter and explicit fresh-root task/model binding:
+  preserve existing company authority, original selection, overrides, and no mid-task switching.
+- [x] Enforce a conservative supported request-cost reservation before **every physical attempt**,
+  including retries/fallbacks/auxiliary calls; refuse unsupported or unknown cost
+  bounds instead of treating ordinary budget settings as strict enforcement.
+- [x] Link supported gateway usage, calculated costs, errors, and delayed/unknown settlement
+  to the exact task/selection/claim, separately from eventual human results.
+- [x] Exercise the real adapter path with a controlled local fake provider:
+  cap exhaustion, parallel attempts, wrong model, duplicate delivery, revocation,
+  streaming failure, retry, cancellation, interrupted/late settlement, and privacy.
+- [ ] Complete B-06 company-wide monitoring/alerts, explicit retention/privacy
+  controls, live-delivery rollback/revocation, and the joined operational walkthrough.
+- [x] Implement B-07 schema-1 policy handoff to this chosen existing-tool/
+  gateway path; bind exact content, capabilities, scope, and compatibility without
+  making exports portable execution credentials.
+
+**Current narrow milestone:** concrete descriptor admission, inactive fresh-session
+coordinator/RPC, actual optional LiteLLM callback factory, authenticated machine
+metadata API, per-attempt budget journal, independent unknown-cost reconciliation
+gate, complete/negative settlement, existing pilot rollback integration, readable
+usage/monitoring, non-destructive collection pause/retention reminder, and exact
+versioned policy handoff are built. No owner database upgrade or dependency/plugin
+loading occurred. Existing assertions and private stores remain unchanged.
+
+**Remaining software after terminal/startup and bounded-local-function wiring:** unrestricted shell/remote-tool and non-text/extra-charge envelopes for general coding;
+direct physical-stream/recovery mapping; known-cost correction workflow; automatic
+subagent/new-run attribution; external alert notification/supervision. The narrow
+factory buffers one non-streaming provider response for client streaming because
+the pinned LiteLLM source bypasses ordinary success hooks for provider streams.
+It does not make another call. No B-04/B-05/B-06 full-completion claim is made.
+The new command/package and reviewed startup loaders are implemented above; actual
+verifier implementations/evidence, installed-host loading and operator deployment
+remain separate requirements. Continuous pilot feedback handling is still limited
+by the frozen experimental source, which conservatively stales on new feedback.
+The focused acceptance fix removes acceptance-only execution staleness; broader
+feedback adaptation and automatic attributed tool failures/results remain separate.
+
+**Deferred validation/configuration:** actual installed versions/peers, lowering,
+callback ordering/bypass/retries/response conversion, identity mappings and gateway
+credentials, real model/cost bounds/invoices, independent company criteria/outcomes,
+approved private sessions, TLS/storage/backup/security/capacity and operator demo.
+The real readiness/delivery/billing verifiers still default to refusal. These gates
+are separate from the missing software above.
+
+**Verification (2026-10-04):** baseline recovered before edits: 671 Python / 19
+JavaScript tests. Final consistent-snapshot verification: **705 Python tests and
+26 JavaScript tests pass**; `git diff --check` passes. The Python suite also invokes
+the JavaScript suite; these are not independent certifications. All old assertions
+are retained. The new 34 Python / seven JavaScript cases cover concrete descriptor
+admission, actual optional callback/coordinator source with controlled hosts, real
+loopback fake-provider HTTP, physical reservation/concurrency/retry/auxiliary
+requests, unknown/cancelled/late/negative settlement, scope/privacy/rollback,
+readable monitoring and exact non-authorizing handoff.
+
+An intermediate full run failed (two notice assertions and 31 errors) after a new
+local variable hid the delivery-state function and the default-installation notice
+was reworded. The implementation name collision was fixed and the truthful default
+notice restored; no assertion or fixture was weakened. No migration/test editing
+collision, owner-store reset, package/plugin installation or real provider call
+was used to resolve it.
+
+**New local commits:** `c38c2fc` adds the narrow delivery/accounting/operations code
+and controlled-provider tests; `c505e39` wires the protected company routes and
+records the support/operating guide. Both are local only. The six original local
+commits remain unchanged. The owner's original uncommitted handoff/decision/roadmap
+files remain uncommitted, with these roadmap/learning status updates preserved.
+No private store, credential, environment, cache or dataset was staged. No push.
+
+Fake-provider responses are a testing substitute only; they do not replace the
+real adapter implementation or prove real-provider billing, security, or quality.
+Installed OpenCode/LiteLLM and real-company/session/provider/deployment validation
+remain separately deferred. Dependency installation, paid calls, credentials,
+private collection, and production criteria require their own explicit approval.
+No Laya. Local commit batches are authorized; public push stays blocked by the
+owner's **Keep code unpublished** choice and unresolved licence.
 
 ### B-05 implementation — versioned learning and conditional scoped selection
 
@@ -301,7 +540,7 @@ deployment checks, not regression tests or authority/safety enforcement.
 - [x] Build conditional selection/reservation/settlement behind separate live approval and server-owned admission verification; default deny unsupported live delivery.
 - [x] Retain overrides, current guard, monitoring failures/gaps, stale checks, history, and rollback.
 - [x] Extend joined regression/adverse tests and document build versus deferred integration.
-- [ ] Implement a supported atomic new-task/model/provider-cap delivery adapter, then wire the descriptor-binding seam; the observer cannot perform this and no live-session switch is substituted.
+- [x] Implement the narrow explicit fresh-root descriptor/LiteLLM accounting path and binding seam with controlled-provider tests. General tool-coding delivery/terminal startup wiring remains separately missing; the observer cannot activate this path and no live-session switch is substituted.
 - [ ] Independently validate company outcomes/evaluation/learning criteria and the real readiness/admission verifier integrations before live use.
 - [ ] Complete later installed-client, approved real-session, and actual deployment checks (owner-deferred).
 
@@ -441,21 +680,25 @@ removed from the goal.
 The owner selected **Keep code unpublished** after review identified the existing
 public GitHub repository and unresolved licence. Do not push implementation until
 the owner chooses a licence; the earlier push request is superseded by that choice.
-The current live-delivery blocker requires a chosen supported company gateway/
-provider task-model-hard-cap admission path as well as integration verification,
-not merely another run of the existing tests. No such path is assumed/installed.
+The live-delivery blocker needs a concrete task/model/hard-cap adapter and
+integration verification, not merely another run of the existing tests. The
+owner subsequently accepted OpenCode V2 → LiteLLM Proxy → company OpenAI API as
+the reference path; see [HANDOFF_DELIVERY.md](HANDOFF_DELIVERY.md). That choice
+does not install software, configure credentials, or establish hard-cap enforcement.
 
 **Local commit batches:** product/guardrail docs (`e388d13`), offline engine and
 synthetic regression fixtures (`717a939`), joined company authority/browser
 services (`7bd955e`), inactive OpenCode connector and HTTP/core tests (`aff0241`),
 and publication/conditional-selection regression coverage (`0d2bcc6`). The final
-batch records operating guides, build limitations, and this roadmap. Shared company
+batch (`fbd2a46`) records operating guides, build limitations, and this roadmap. Shared company
 modules already join B-02–B-05, so these are dependency/topic batches of the current
 implementation, not invented historical milestone snapshots. Private owner stores,
 credentials, environment files, generated caches, and node dependencies are excluded.
 Verification remains 671 Python tests plus 19 JavaScript tests; all 34 publication/
 selection tests, 32 connector tests, and 383 offline tests also pass in focused runs.
-These commits remain local; the remote was not pushed or changed.
+These six commits remain local; the remote was not pushed or changed. This new
+delivery handoff/decision/roadmap update is documentation-only and remains
+uncommitted for the next session to inspect and preserve.
 
 Real-session/data access remains deferred until the owner supplies approved
 scope. Company-managed credentials, trusted approver identity, a reviewed
@@ -653,14 +896,13 @@ or actual company deployment are supplied by these tests.
 **Deferred by user:** approved real-session validation. Other offline work
 continues; no private session reads or company credential assumptions are made.
 
-**Next building work:** B-03 browser implementation is now complete (checklist
-above), reusing completed company/authorization mechanics rather than rebuilding
-them. B-04 remains separately scoped and was not implemented in this session. Later
-B-04/B-05 connect real task/provider admission and approved company evaluation to
-the trusted readiness interface; production criteria are not guessed. Actual
-deployment remains an operator-approved validation gate. Real-session access stays
-deferred. The joined local controls and live-boundary contract are in
-[COMPANY_OPERATIONS.md](COMPANY_OPERATIONS.md).
+**Current next build (updated 2026-10-04):** preserve completed B-03 and the limited
+B-04/conditional B-05 layers. Implement the accepted LiteLLM/company OpenAI
+delivery adapter using controlled fake-provider tests, then remaining B-04/B-05
+usage/linkage, B-06, and B-07. Recover [HANDOFF_DELIVERY.md](HANDOFF_DELIVERY.md)
+before editing. Real data/verifier/criteria, installed-client checks, and actual
+deployment remain separately approved/deferred gates; no production parameters,
+credentials, or private access are inferred from the reference-path agreement.
 
 ### B-02 implementation checklist
 
@@ -773,6 +1015,8 @@ company-wide collection remain later, separately approved integration work.
 | 2026-10-04 | Recovered the handoff and passing 573-test baseline, then completed B-03 on the existing Django application: task cards/guided linkage, independent evidence review, labeled validation and exact category/model/developer scope selection, signed browser confirmations, guided policy editing, readable guards/history/accounting, and owned settlement choices. | 605 tests pass (32 new browser/HTTP checks); B-03 complete for the accepted interface scope. All baseline tests retained; same-app laptop walkthrough documented. B-01/B-02, historical roles/corrections/negatives, and uncommitted user work preserved. No dependencies/migrations, B-04 connector, private sessions, model calls, demo-data reset, commits, pushes, real readiness verifier, or live deployment. |
 | 2026-10-04 | Owner accepted explicit-task B-04 implementation with no Laya. Added scoped browser-issued delegated credentials, strict metadata-only API, additive connector records, inactive OpenCode V2 server/terminal plugin source, immutable retries/gaps, reported feedback linkage, interrupted-close recovery, and source-bound review diagnostics. | 637 Python tests pass (605 baseline + 32 connector/API/HTTP/runner checks); 14 JavaScript tests pass. Actual synthetic loopback browser/API flow and controlled plugin/core are tested, not installed OpenCode/TUI rendering or private task capture. B-04 remains limited/unverified at those gates; root-task only, no exact per-request usage or subagent inference. No dependencies/plugins installed, owner data migration/reset, Laya, model/provider calls, private sessions, commits, pushes, or live routing. |
 | 2026-10-04 | Owner deferred installed-client/real-company checks while building and requested B-05. Added explicit learner publication/default-only reversal, future learned browser/connector tasks, immutable refusal/version history, frozen validation/current-negative checks, and conditional live-scope selection/accounting/one-use claim behind a default-denying admission interface. | 671 Python and 19 JavaScript tests pass; no assertions weakened. Includes connected feedback/learner flow, negative/gap monitoring, exact scope/override/budget/proof/claim binding, paused/revoked settlement/rollback, and concurrent shared limits. B-05 conditional build milestone, not full live delivery: atomic OpenCode/gateway task-model-provider-cap adapter is unfinished software. Real evidence/verifier/deployment and installed-client checks remain deferred; no Laya/dependencies/private access/provider calls/activation/user-store reset/commits/pushes. |
+| 2026-10-04 | Created six owner-authorized local commit batches for guardrails, engine, joined company services, connector, verification, and operating docs. Owner selected Keep code unpublished because the existing GitHub remote is public and licence is unresolved. | Working tree clean before this handoff; main is six commits ahead of origin/main. No push or private-data inclusion. Existing 671 Python / 19 JavaScript verification retained. |
+| 2026-10-04 | Owner accepted the OpenCode V2 → LiteLLM Proxy → company OpenAI API reference path and fake-provider testing of the real adapter, then requested a fresh-session handoff for this and remaining tasks. | Documentation-only: HANDOFF_DELIVERY.md, accepted delivery decisions, and next-build checklist saved. Concrete adapter, B-06, and B-07 remain to build; no dependency/plugin installation, real provider call, private access, assertion changes, commits, or push during handoff preparation. |
 
 ## Phase 0 — Product foundation
 

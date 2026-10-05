@@ -3,6 +3,22 @@
 This file prevents the project from drifting. A decision can be changed, but
 the reason and date must be recorded.
 
+## Public GitHub publication — owner authorized 2026-10-05
+
+After discussing open-source versus public source, the owner explicitly requested
+publication so the code is on GitHub. This supersedes the earlier **Keep code
+unpublished until licence selection** restriction for the reviewed Tarkado code,
+documentation and illustrative demos in the existing public `Sarvesh5273/Tarkado`
+repository. Commit logical batches and push normally; preserve all existing commits.
+
+No licence for Tarkado itself is selected or granted by this publication. Existing
+third-party notices retain their own terms. Public visibility is not a claim of
+open-source licensing, production readiness or validated cost/quality improvement.
+Raw prompts/captures, local generation state, credentials, private stores, environments,
+backups and unapproved company/session data remain excluded. No dependency installation,
+plugin activation, owner-store change, real model/provider call or live deployment is
+authorized by GitHub publication. Older no-push notes below describe historical choices.
+
 ## Finalized company workflow — 2026-10-03
 
 **Accepted by the project owner.** [WORKFLOW.md](WORKFLOW.md) is the central
@@ -115,7 +131,30 @@ official OpenCode V2 documentation covers explicit run/session model choice and
 request hooks, but does not establish an atomic company task/model/hard-cost-cap
 contract. Choose and verify one concrete company gateway/provider admission path
 before claiming that adapter can be completed; tests must exercise that path.
-No new provider/gateway, credentials, live calls, or dependency is selected here.
+At that review no provider/gateway was selected. The subsequent reference-path
+agreement below now selects the initial integration; credentials, real calls,
+dependency installation, and deployment remain separately unapproved.
+
+### First delivery reference path — accepted 2026-10-04
+
+After the technical path was explained in plain language, the owner accepted the
+recommendation below and agreed to initial fake-provider testing. This updates
+the previously unresolved reference-path choice, not company workflow W-01–W-08.
+
+| ID | Accepted decision |
+| --- | --- |
+| AD-01 | Build the first concrete adapter for OpenCode V2 → an existing LiteLLM Proxy → company-managed OpenAI API. Tarkado stays the policy/evaluation service, not a replacement gateway or coding client. This is a reference integration, not an assumption that every adopting company already has LiteLLM. |
+| AD-02 | Implement a real narrow adapter, then initially run its supported request/admission/settlement path against a controlled fake provider. Fake responses let regression tests exercise failures/limits without credentials, private code, or paid generation; they do not prove installed-client/real-provider integration or replace the implementation with a mock-only product. |
+| AD-03 | Ordinary gateway/provider budget settings are not sufficient evidence of a strict task cap. Reserve conservative supported maximum costs before each paid attempt, preserve unknown/error costs, and refuse automatic delivery when bounds, identity, task-model binding, or current authority cannot be established. Include retries, fallback attempts, and auxiliary requests in accounting. |
+
+This agreement authorizes the reference design/build direction only. Installing
+LiteLLM/Redis/SDKs/tokenizers or loading OpenCode plugins still requires separate
+approval. Exact runtime versions, deployment, approved real models/prices/data,
+readiness criteria, API credentials, and any real calls remain unconfigured or
+deferred. No Laya. Local logical commits remain authorized; public push remains
+deferred by the owner's **Keep code unpublished** choice until licence approval.
+See [HANDOFF_DELIVERY.md](HANDOFF_DELIVERY.md) for implementation recovery and
+primary documentation already checked.
 
 | Decision | Why | Status |
 | --- | --- | --- |
@@ -169,7 +208,7 @@ No new provider/gateway, credentials, live calls, or dependency is selected here
 | Evidence/confidence gates and pilot limits | No numeric thresholds, observation duration, or rollout/rollback triggers have been approved. | Validate before automatic routing. |
 | Later self-activating pilots | Preapproved evidence rules are a possible future option, not authorization for the first pilot. | Revisit after validating a reviewed pilot. |
 | Active-learning algorithm | Useful possibility, not a claim yet. | After random-selection baseline exists. |
-| First gateway export | Likely LiteLLM/OpenRouter-compatible policy. | After local policy format stabilises. |
+| First gateway export | LiteLLM Proxy → company OpenAI API is accepted as the first delivery reference (AD-01). Exact stable policy/export contract remains B-07 work; no gateway or SDK is installed. | After supported adapter/binding/accounting design is implemented and the local policy format is stable. |
 | Laya integration | Optional research track. | Only after baseline is measured. |
 
 ## Rejected directions
@@ -214,6 +253,7 @@ No new provider/gateway, credentials, live calls, or dependency is selected here
 | 2026-10-04 | Owner accepted B-03 browser-first Django interface direction and requested explanation of the future in-tool experience. Recorded UI-01–UI-03 after checking official OpenCode V2 skills/plugins/CLI documentation. Documentation/design only: existing UI/authority code is preserved; no connector/skill/plugin was installed or claimed complete, and live access remains deferred. |
 | 2026-10-04 | Owner accepted no Laya for B-04 and requested the explicit-task connector build. Implemented scoped delegated browser/API records and inactive V2 server/CLI plugin source, preserving manual choice, privacy, negative/unknown signals, and separate company approval authority. 637 Python and 14 JavaScript tests pass; installed TUI/host and approved real-session validation remain pending. No dependencies/plugin activation, private sessions, provider calls, user-store changes, or live routing. |
 | 2026-10-04 | Owner deferred real-client/company checks during build and requested B-05. Implemented learner publication/reversal/future manual guidance and conditional exact-scope selection/accounting behind separate readiness and atomic-admission gates. 671 Python and 19 JavaScript tests pass. Missing actual capped new-task delivery remains unfinished software, not a validation checkbox; no live switch/provider/private access/dependencies/activation/commits/pushes. |
+| 2026-10-04 | Owner accepted the LiteLLM/company OpenAI delivery reference and controlled fake-provider testing for the real adapter; recorded AD-01–AD-03 and a fresh-session handoff. No installation, real calls, private access, production thresholds, or public push approved by this decision. |
 
 ## Acceptance/freshness separation — owner-directed correction 2026-10-04
 

@@ -1,5 +1,10 @@
 # B-05 integrated learning and conditional scoped selection
 
+**Publication update (2026-10-05):** the owner authorized reviewed code/documentation
+publication to the public GitHub repository without selecting a Tarkado licence.
+Earlier no-push notes below are historical. This does not activate routing or authorize
+private data, real provider calls, dependencies or deployment.
+
 **Current continuous-feedback follow-up (2026-10-04):** the owner explicitly approved
 routine progress for matching model reports and first positive human results on new,
 closed, healthy exact-bound pilot tasks. Feedback stays pending explicit learning review,
@@ -12,6 +17,16 @@ delivery/build counts and missing-adapter paragraphs below are historical milest
 not today's software status or installed-host/provider/company readiness.
 Current routine-progress verification: **880 Python / 47 JavaScript tests pass**,
 retaining the 838 Python baseline with 42 new regressions and unchanged assertions.
+
+**Delivery follow-up (2026-10-04):** the formerly missing narrow adapter is now
+implemented for explicit fresh-root text tasks, with real optional LiteLLM callback
+source, concrete descriptor admission, machine-only metadata API, per-physical-attempt
+reservations, usage/unknown settlement, monitoring/privacy and schema-1 handoff.
+Controlled-provider tests do not validate installed hosts or real billing. Tool/general
+coding envelopes, terminal delivery UI/startup wiring and known-cost corrections
+remain missing software, separately from unconfigured real verifiers and deferred
+company/session/provider validation. [DELIVERY_REFERENCE.md](DELIVERY_REFERENCE.md)
+supersedes the earlier missing-concrete-adapter status below; B-05 remains incomplete.
 
 **Updated:** 2026-10-04. **Build status:** versioned learner publication, historical
 learned suggestions, connector feedback/freshness, conditional scoped selection/
@@ -231,3 +246,12 @@ The owner authorized logical local commit batches, then selected **Keep code
 unpublished** because the remote is public and the licence is unresolved. No
 implementation push is authorized until the licence choice is made. This changes
 the earlier no-commit constraint only; all data/access/execution limits remain.
+
+**Later reference-path agreement (2026-10-04):** the owner accepted OpenCode V2 →
+existing LiteLLM Proxy → company-managed OpenAI API for the first concrete adapter,
+with initial controlled fake-provider tests of the real implementation. Ordinary
+budget settings remain insufficient proof of strict per-task enforcement. Actual
+request/attempt reservations, task/model identity, usage/cost/error reconciliation,
+and unsupported-case refusal still need implementation. No installation or real
+API/private-session access is authorized by this design choice. Continue from
+[HANDOFF_DELIVERY.md](HANDOFF_DELIVERY.md), then remaining B-06/B-07 work.

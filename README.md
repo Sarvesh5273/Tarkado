@@ -13,6 +13,30 @@ limited pilot supported by evidence.
 
 The accepted company workflow is recorded in [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
+## Current build and publication status
+
+This repository is public by the owner's explicit choice. **No licence for Tarkado
+itself has been selected**; bundled third-party demo assets retain their own notices.
+Public source is not a production-readiness or savings claim.
+
+The conditional reference is **OpenCode V2 → existing LiteLLM Proxy → company-managed
+OpenAI API**. Authenticated company controls, narrow delivery/accounting, bounded local
+functions, metadata-only tool capture, auditable known-cost corrections and narrowly
+approved routine pilot-feedback handling are implemented and tested with controlled
+evidence. Real verifiers default to refusal; no plugin or pilot is activated here.
+See [current build tasks](docs/TASKS.md), [cost corrections](docs/COST_CORRECTIONS.md)
+and [pilot feedback](docs/PILOT_FEEDBACK.md). Earlier milestone descriptions below
+do not imply installed-host, real billing/outcome or deployment validation.
+
+Browser-playable illustrative demos:
+
+- [Current implemented workflow](demo_video/current-implementation/README.md):
+  fictional reconstructed interfaces; stops before real readiness/activation.
+- [Planned deployment workflow](demo_video/videos/tarkado-deployment-workflow/README.md):
+  the intended journey, explicitly labelled as a concept simulation.
+
+Private stores, credentials, environments and raw authoring captures are excluded.
+
 ## Name
 
 **Tarkado** is a coined product name:
