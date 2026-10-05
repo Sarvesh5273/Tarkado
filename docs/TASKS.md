@@ -12,8 +12,26 @@ Private stores, credentials, environments, backups, raw authoring captures and l
 generation state remain excluded. Demo screens are fictional reconstructions, not
 private product/session captures. Preserve third-party notices for bundled assets.
 This is publication, not model execution, plugin installation or production activation.
-Latest implementation verification: 880 Python / 47 JavaScript tests; a consistent-
-source regression run is underway before this push. Test counts are not readiness.
+**Final pre-push verification:** **880 Python / 47 JavaScript tests pass** on unchanged
+application/test source; all earlier assertions remain intact. Python also invokes
+JavaScript, so the counts are not independent certifications. `git diff --check` passes.
+The outgoing-history review found no private-store/credential/environment/capture paths
+or blobs over 50 MiB. Strong secret-pattern findings were intentional negative-test
+fixtures, inspected without exposing credential values; this is not a secret-free guarantee.
+
+Demo review checked four HTML files' local references, five inline scripts' syntax,
+project JSON metadata and the player builder's syntax. Recorded visual/checker results
+remain in the demo README files; no new HyperFrames installation, rendering, runtime
+upgrade, real-provider call, owner-store access or pilot activation was performed.
+Upstream vendored assets retain their bytes and licence notices. Raw authoring captures
+and local generation state remain on disk, ignored rather than deleted or published.
+
+**Commit batches:** `a5662ae` preserves historical delivery documentation and records
+publication authorization; `9198c7d` adds the controlled implementation demo and required
+asset notices; `a1f3d66` adds the illustrative planned-deployment presentation. A final
+documentation commit records these checks before the normal `origin/main` push. All
+15 earlier implementation/documentation commits remain unchanged. No Tarkado licence,
+GitHub Pages deployment or production-readiness claim is inferred from publication.
 
 ## Completion goal — First end-to-end Tarkado build
 
