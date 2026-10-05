@@ -1,0 +1,4 @@
+# Keep upstream vendored assets byte-for-byte, including their original whitespace.
+demo_video/**/gsap.min.js linguist-vendored -whitespace
+demo_video/**/hyperframe.runtime.iife.js linguist-vendored
+demo_video/**/hyperframes-player.global.js linguist-vendored

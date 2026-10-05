@@ -40,3 +40,8 @@ local/
 .DS_Store
 .idea/
 .vscode/
+
+# Demo authoring captures and local generation state are not publishable source.
+/demo_video/**/capture/
+/demo_video/**/.media/
+/demo_video/**/.hyperframes/

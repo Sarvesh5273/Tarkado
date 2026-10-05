@@ -1,0 +1,2969 @@
+<!doctype html>
+<html lang="en" class="hf-player">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Tarkado — Implemented workflow · player</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      /* Self-hosted type — no network fetch, identical in preview and raw file. */
+      @font-face {
+        font-family: 'Montserrat';
+        font-style: normal;
+        font-weight: 400 900;
+        font-display: block;
+        src: url(assets/fonts/montserrat-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'Montserrat';
+        font-style: normal;
+        font-weight: 400 900;
+        font-display: block;
+        src: url(assets/fonts/montserrat-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'IBM Plex Mono';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url(assets/fonts/ibm-plex-mono-400-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'IBM Plex Mono';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url(assets/fonts/ibm-plex-mono-400-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: 'IBM Plex Mono';
+        font-style: normal;
+        font-weight: 700;
+        font-display: block;
+        src: url(assets/fonts/ibm-plex-mono-700-latin-ext.woff2) format('woff2');
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: 'IBM Plex Mono';
+        font-style: normal;
+        font-weight: 700;
+        font-display: block;
+        src: url(assets/fonts/ibm-plex-mono-700-latin.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      /* ============================================================
+         Tarkado · current implementation walkthrough
+         Design truth: frame.md
+         ============================================================ */
+      :root {
+        --stage: #0a0d13;
+        --ink: #e8edf4;
+        --ink-dim: #98a2b3;
+        --amber: #f0a93b;
+        --amber-ink: #8a5606;
+        --amber-tint: #fdf1dc;
+        --app: #f6f7f9;
+        --card: #ffffff;
+        --app-ink: #141922;
+        --app-dim: #5b6472;
+        --line: #dce1e9;
+        --term: #0d1117;
+        --term-ink: #c9d1d9;
+        --green: #2f9e6e;
+        --green-ink: #166b48;
+        --green-tint: #e3f5ed;
+        --red: #d2564b;
+        --red-ink: #9d3229;
+        --red-tint: #fbeae8;
+        --grey: #8a93a2;
+        --grey-ink: #4f5765;
+        --grey-tint: #eceef2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--stage);
+        color: var(--ink);
+        font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--stage);
+      }
+
+      .mono {
+        font-family: "IBM Plex Mono", "Courier New", monospace;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---------- stage (untimed background) ---------- */
+      .stage-grid {
+        position: absolute;
+        inset: 0;
+        opacity: 0.5;
+        z-index: 0;
+      }
+      .stage-glow {
+        position: absolute;
+        left: 260px;
+        top: 40px;
+        width: 1400px;
+        height: 820px;
+        background: radial-gradient(
+          closest-side,
+          rgba(240, 169, 59, 0.2),
+          rgba(240, 169, 59, 0)
+        );
+        z-index: 0;
+      }
+      .recon-note {
+        position: absolute;
+        top: 44px;
+        right: 96px;
+        z-index: 40;
+        font-size: 28px;
+        line-height: 1.32;
+        letter-spacing: 0.02em;
+        color: var(--ink-dim);
+        text-align: right;
+      }
+      .recon-note b {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      /* ---------- scene scaffold ---------- */
+      .scene {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+      }
+      .world {
+        position: absolute;
+        inset: 0;
+        will-change: transform;
+      }
+      .marker {
+        position: absolute;
+        top: 34px;
+        left: 96px;
+        max-width: 1120px;
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+      }
+      .marker .num {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--amber);
+        letter-spacing: 0.06em;
+      }
+      .marker .name {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--ink);
+        letter-spacing: -0.01em;
+      }
+      .marker .rule {
+        display: block;
+        flex: 1 1 0;
+        min-width: 32px;
+        height: 2px;
+        background: rgba(240, 169, 59, 0.45);
+        margin-left: 8px;
+        align-self: center;
+      }
+
+      /* ---------- application window ---------- */
+      .win {
+        position: absolute;
+        left: 96px;
+        top: 140px;
+        width: 1728px;
+        height: 680px;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+      }
+      .win-bar {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        height: 58px;
+        padding: 0 24px;
+        font-size: 20px;
+      }
+      .dots {
+        display: flex;
+        gap: 9px;
+      }
+      .dots i {
+        display: block;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+      }
+      .win-app .win-bar {
+        background: #e9ecf1;
+        border-bottom: 2px solid var(--line);
+        color: var(--app-dim);
+      }
+      .win-app .dots i {
+        background: #c4cad4;
+      }
+      .win-term .win-bar {
+        background: #161b22;
+        border-bottom: 2px solid #21262d;
+        color: #8b949e;
+      }
+      .win-term .dots i {
+        background: #30363d;
+      }
+      .win-body {
+        height: 622px;
+        display: flex;
+      }
+      .win-app {
+        background: var(--app);
+        color: var(--app-ink);
+      }
+      .win-app .win-body {
+        padding: 34px 40px;
+        gap: 34px;
+      }
+      .win-term {
+        background: var(--term);
+        color: var(--term-ink);
+      }
+      .win-term .win-body {
+        padding: 30px 36px;
+        gap: 30px;
+      }
+
+      /* ---------- shared UI atoms ---------- */
+      .h1 {
+        font-size: 42px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        margin: 0 0 6px;
+      }
+      .sub {
+        font-size: 22px;
+        color: var(--app-dim);
+        margin: 0 0 18px;
+      }
+      .card {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 22px 24px;
+      }
+      .lbl {
+        font-size: 18px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--app-dim);
+        font-weight: 700;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 11px;
+        border-radius: 999px;
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        border: 2px solid transparent;
+        white-space: nowrap;
+      }
+      .b-green {
+        background: var(--green-tint);
+        color: var(--green-ink);
+        border-color: #b9e2d0;
+      }
+      .b-red {
+        background: var(--red-tint);
+        color: var(--red-ink);
+        border-color: #f0c4bf;
+      }
+      .b-grey {
+        background: var(--grey-tint);
+        color: var(--grey-ink);
+        border-color: #d3d7de;
+      }
+      .b-amber {
+        background: var(--amber-tint);
+        color: var(--amber-ink);
+        border-color: #f2d9a8;
+      }
+      .badge.dark {
+        background: rgba(240, 169, 59, 0.14);
+        color: var(--amber);
+        border-color: rgba(240, 169, 59, 0.5);
+      }
+
+      /* ---------- caption block ---------- */
+      .caption {
+        position: absolute;
+        left: 96px;
+        top: 836px;
+        width: 1560px;
+      }
+      .caption .main {
+        font-size: 38px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+        margin: 0;
+        line-height: 1.24;
+        opacity: 0;
+      }
+      .caption .main em {
+        font-style: normal;
+        color: var(--amber);
+      }
+      .caption .sec {
+        font-size: 28px;
+        color: var(--ink-dim);
+        margin: 10px 0 0;
+        line-height: 1.35;
+        opacity: 0;
+      }
+      .caption .note {
+        display: inline-block;
+        margin-top: 10px;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--amber);
+        border-left: 4px solid var(--amber);
+        padding-left: 14px;
+        opacity: 0;
+      }
+
+      /* marker highlight (css-marker-patterns → highlight mode) */
+      .mh-highlight-wrap {
+        position: relative;
+        display: inline;
+      }
+      .mh-highlight-bar {
+        position: absolute;
+        inset: 0 -10px;
+        background: var(--amber);
+        opacity: 0.42;
+        border-radius: 3px;
+        transform-origin: left center;
+        z-index: 0;
+      }
+      .mh-highlight-wrap > span.copy {
+        position: relative;
+        z-index: 2;
+      }
+
+      /* ---------- persistent honesty layer ---------- */
+      .honesty {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 34px;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        padding: 0 96px;
+      }
+      .honesty-tag {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: var(--ink);
+        background: rgba(240, 169, 59, 0.12);
+        border: 2px solid rgba(240, 169, 59, 0.55);
+        border-radius: 999px;
+        padding: 9px 24px;
+        white-space: nowrap;
+      }
+      .honesty-tag .pip {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: var(--amber);
+        flex: none;
+      }
+      .rail {
+        display: flex;
+        gap: 6px;
+        flex: 1;
+        height: 8px;
+      }
+      .seg {
+        position: relative;
+        height: 8px;
+        background: rgba(232, 237, 244, 0.13);
+        overflow: hidden;
+      }
+      .seg > i {
+        position: absolute;
+        inset: 0;
+        display: block;
+        background: var(--amber);
+        transform-origin: left center;
+      }
+      .connector-tag {
+        position: absolute;
+        top: 78px;
+        left: 96px;
+        z-index: 60;
+        opacity: 0;
+        font-size: 28px;
+        line-height: 1.2;
+        font-weight: 700;
+        color: var(--amber);
+        background: rgba(240, 169, 59, 0.1);
+        border: 2px dashed rgba(240, 169, 59, 0.6);
+        border-radius: 8px;
+        padding: 9px 20px;
+      }
+
+      /* ============================================================
+         SCENE 1 — company setup
+         ============================================================ */
+      #s1-left {
+        width: 1000px;
+        flex: none;
+      }
+      #s1-right {
+        flex: 1;
+      }
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 11px 20px;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 9px;
+        margin-bottom: 10px;
+        opacity: 0;
+      }
+      .step .tick {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--green-tint);
+        border: 2px solid var(--green);
+        flex: none;
+        display: grid;
+        place-items: center;
+      }
+      .step .tick svg {
+        width: 16px;
+        height: 16px;
+      }
+      .step .txt {
+        font-size: 23px;
+        font-weight: 700;
+        flex: 1;
+      }
+      .step .txt span {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--app-dim);
+        margin-top: 3px;
+      }
+      .reg-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 2px solid var(--line);
+        opacity: 0;
+      }
+      .reg-row:last-child {
+        border-bottom: 0;
+      }
+      .reg-row .m {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .scope-note {
+        margin-top: 18px;
+        font-size: 19px;
+        line-height: 1.5;
+        color: var(--app-dim);
+        opacity: 0;
+      }
+      .scope-note b {
+        color: var(--app-ink);
+      }
+      #s1-btn {
+        margin-top: 20px;
+        display: inline-block;
+        background: var(--app-ink);
+        color: #fff;
+        font-size: 22px;
+        font-weight: 700;
+        padding: 15px 30px;
+        border-radius: 8px;
+        opacity: 0;
+      }
+
+      /* ---------- cursor + ripple (shared) ---------- */
+      .cursor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 50;
+        width: 30px;
+        height: 38px;
+        pointer-events: none;
+        opacity: 0;
+      }
+      .ripple {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 130px;
+        height: 130px;
+        margin: -65px 0 0 -65px;
+        border-radius: 50%;
+        border: 3px solid var(--amber);
+        pointer-events: none;
+        z-index: 49;
+        opacity: 0;
+      }
+
+      /* ============================================================
+         SCENE 2 — explicit task observation
+         ============================================================ */
+      #s2-term {
+        width: 640px;
+        flex: none;
+        border-right: 2px solid #21262d;
+        padding-right: 28px;
+      }
+      #s2-panel {
+        flex: 1;
+      }
+      .tline {
+        font-size: 21px;
+        line-height: 1.85;
+        color: var(--term-ink);
+        opacity: 0;
+        white-space: nowrap;
+      }
+      .tline .g {
+        color: #7bc96f;
+      }
+      .tline .d {
+        color: #8b949e;
+      }
+      .tline .a {
+        color: var(--amber);
+      }
+      .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        opacity: 0;
+      }
+      .panel-title .t {
+        font-size: 27px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+      }
+      .field {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 13px 18px;
+        background: #161b22;
+        border: 2px solid #21262d;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        opacity: 0;
+      }
+      .field .k {
+        font-size: 19px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #8b949e;
+        font-weight: 700;
+      }
+      .field .v {
+        font-size: 23px;
+        font-weight: 700;
+        color: var(--term-ink);
+      }
+      .field .v.ok {
+        color: #7bc96f;
+      }
+      .conn {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 16px;
+        opacity: 0;
+      }
+      .conn .chip {
+        font-size: 20px;
+        font-weight: 700;
+        padding: 11px 18px;
+        border-radius: 8px;
+        background: #161b22;
+        border: 2px solid #21262d;
+        color: var(--term-ink);
+        white-space: nowrap;
+      }
+      .conn .chip.hi {
+        border-color: rgba(240, 169, 59, 0.6);
+        color: var(--amber);
+      }
+      .conn svg {
+        flex: 1;
+        height: 26px;
+        overflow: visible;
+      }
+      .conn svg path {
+        fill: none;
+        stroke: var(--amber);
+        stroke-width: 3;
+        stroke-linecap: round;
+      }
+      .conn-note {
+        margin-top: 12px;
+        font-size: 19px;
+        color: #8b949e;
+        line-height: 1.5;
+        opacity: 0;
+      }
+      .conn-note b {
+        color: var(--term-ink);
+      }
+
+      /* ============================================================
+         SCENE 3 — manual shadow suggestion
+         ============================================================ */
+      #s3-left {
+        width: 1040px;
+        flex: none;
+      }
+      #s3-right {
+        flex: 1;
+      }
+      .sugg {
+        background: #161b22;
+        border: 2px solid rgba(240, 169, 59, 0.55);
+        border-radius: 12px;
+        padding: 26px 28px;
+        opacity: 0;
+      }
+      .sugg .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 13px 0;
+        border-bottom: 2px solid #21262d;
+        font-size: 23px;
+      }
+      .sugg .row:last-of-type {
+        border-bottom: 0;
+      }
+      .sugg .row .k {
+        color: #8b949e;
+        font-size: 19px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .sugg .row .v {
+        font-weight: 700;
+        text-align: right;
+      }
+      .sugg .row .v.a {
+        color: var(--amber);
+      }
+      .conf-track {
+        width: 300px;
+        height: 14px;
+        background: #21262d;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+      }
+      .conf-fill {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        background: var(--amber);
+        transform-origin: left center;
+      }
+      .btns {
+        display: flex;
+        gap: 16px;
+        margin-top: 24px;
+        opacity: 0;
+      }
+      .btn {
+        font-size: 22px;
+        font-weight: 700;
+        padding: 15px 26px;
+        border-radius: 8px;
+        border: 2px solid #30363d;
+        background: #21262d;
+        color: var(--term-ink);
+      }
+      .btn.primary {
+        background: var(--amber);
+        border-color: var(--amber);
+        color: #14191f;
+      }
+      #s3-accepted {
+        margin-top: 22px;
+        font-size: 24px;
+        font-weight: 700;
+        color: #7bc96f;
+        opacity: 0;
+      }
+      #s3-accepted span {
+        display: block;
+        font-size: 20px;
+        font-weight: 400;
+        color: #8b949e;
+        margin-top: 6px;
+      }
+      .picker {
+        background: #161b22;
+        border: 2px solid #21262d;
+        border-radius: 12px;
+        padding: 24px 26px;
+        opacity: 0;
+      }
+      .picker .sel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-top: 14px;
+        padding: 15px 18px;
+        border: 2px solid #30363d;
+        border-radius: 8px;
+        background: #0d1117;
+        font-size: 23px;
+        font-weight: 700;
+      }
+      .picker .sel .caret {
+        color: #8b949e;
+        font-size: 18px;
+      }
+      .picker .opt {
+        margin-top: 9px;
+        padding: 14px 18px;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        font-size: 22px;
+        color: #8b949e;
+        opacity: 0;
+      }
+      .picker .opt.on {
+        border-color: rgba(240, 169, 59, 0.6);
+        background: rgba(240, 169, 59, 0.12);
+        color: var(--amber);
+      }
+      .picker .cap {
+        margin-top: 16px;
+        font-size: 19px;
+        color: #8b949e;
+        line-height: 1.5;
+      }
+
+      /* ============================================================
+         SCENE 4 — linked records
+         ============================================================ */
+      .chain {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        width: 100%;
+      }
+      .node {
+        flex: 1;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 20px 20px;
+        opacity: 0;
+      }
+      .node .step-n {
+        font-size: 17px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--app-dim);
+        font-weight: 700;
+      }
+      .node .big {
+        font-size: 25px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        margin: 9px 0 8px;
+      }
+      .node .meta {
+        font-size: 18px;
+        color: var(--app-dim);
+        line-height: 1.45;
+      }
+      .link {
+        width: 74px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        position: relative;
+      }
+      .link svg {
+        width: 74px;
+        height: 30px;
+        overflow: visible;
+      }
+      .link svg path {
+        fill: none;
+        stroke: var(--app-dim);
+        stroke-width: 3;
+        stroke-linecap: round;
+      }
+      .distinguish {
+        display: flex;
+        gap: 26px;
+        margin-top: 18px;
+        width: 100%;
+      }
+      .dist-card {
+        flex: 1;
+        border-radius: 10px;
+        padding: 17px 22px;
+        opacity: 0;
+      }
+      .dist-card.sys {
+        background: var(--grey-tint);
+        border: 2px solid #d3d7de;
+      }
+      .dist-card.hum {
+        background: var(--amber-tint);
+        border: 2px solid #f2d9a8;
+      }
+      .dist-card .t {
+        font-size: 26px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        color: var(--app-ink);
+      }
+      .dist-card .d {
+        font-size: 19px;
+        color: var(--app-dim);
+        margin-top: 7px;
+        line-height: 1.42;
+      }
+      .dist-card.hum .d b {
+        color: var(--amber-ink);
+      }
+      .unverified {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        opacity: 0;
+      }
+      .ref {
+        font-size: 21px;
+        background: var(--card);
+        border: 2px dashed var(--line);
+        border-radius: 8px;
+        padding: 12px 18px;
+        color: var(--app-dim);
+      }
+      .ref b {
+        color: var(--app-ink);
+      }
+      .other-task {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-left: 6px solid var(--green);
+        border-radius: 10px;
+        padding: 15px 22px;
+        font-size: 22px;
+        opacity: 0;
+      }
+      .other-task b {
+        font-weight: 900;
+      }
+
+      /* ============================================================
+         SCENE 5 — evidence retained
+         ============================================================ */
+      .tbl {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 20px;
+      }
+      .tbl th {
+        text-align: left;
+        font-size: 17px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--app-dim);
+        padding: 0 14px 9px;
+        border-bottom: 3px solid var(--line);
+        font-weight: 700;
+      }
+      .tbl td {
+        padding: 6px 14px;
+        border-bottom: 2px solid var(--line);
+        font-weight: 700;
+      }
+      .tbl td.dim {
+        font-weight: 400;
+        color: var(--app-dim);
+      }
+      .tbl tr.r {
+        opacity: 0;
+      }
+      .counts {
+        display: flex;
+        gap: 24px;
+        margin-top: 16px;
+        align-items: flex-end;
+      }
+      .count {
+        flex: 1;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 11px 18px;
+        opacity: 0;
+      }
+      .count .n {
+        display: block;
+        font-size: 44px;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .count .cap {
+        display: block;
+        font-size: 19px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-top: 10px;
+        color: var(--app-dim);
+      }
+      .count.pos .n {
+        color: var(--green-ink);
+      }
+      .count.neg .n {
+        color: var(--red-ink);
+      }
+      .count.pend .n {
+        color: var(--grey-ink);
+      }
+      .count small {
+        display: block;
+        font-size: 17px;
+        font-weight: 400;
+        margin-top: 8px;
+        color: var(--app-dim);
+      }
+      .role-note {
+        margin-top: 16px;
+        font-size: 22px;
+        color: var(--app-ink);
+        opacity: 0;
+      }
+
+      /* ============================================================
+         SCENE 6 — experimental learning / category review
+         ============================================================ */
+      #s6-left {
+        width: 980px;
+        flex: none;
+      }
+      #s6-right {
+        flex: 1;
+      }
+      .plan {
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 24px 26px;
+        opacity: 0;
+      }
+      .selrow {
+        display: flex;
+        gap: 18px;
+        margin-top: 16px;
+      }
+      .selbox {
+        flex: 1;
+        border: 2px solid var(--line);
+        border-radius: 8px;
+        padding: 13px 16px;
+        background: var(--app);
+      }
+      .selbox .k {
+        font-size: 16px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--app-dim);
+        font-weight: 700;
+      }
+      .selbox .v {
+        font-size: 23px;
+        font-weight: 700;
+        margin-top: 5px;
+      }
+      .freeze {
+        display: flex;
+        gap: 14px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+      .chipx {
+        display: inline-block;
+        font-size: 19px;
+        font-weight: 700;
+        padding: 9px 15px;
+        border-radius: 7px;
+        background: var(--app);
+        border: 2px solid var(--line);
+        color: var(--app-dim);
+        opacity: 0;
+      }
+      .chipx b {
+        color: var(--app-ink);
+      }
+      .params {
+        margin-top: 18px;
+        border: 2px solid #f2d9a8;
+        background: var(--amber-tint);
+        border-radius: 10px;
+        padding: 16px 18px;
+        opacity: 0;
+      }
+      .params .warn {
+        font-size: 20px;
+        font-weight: 900;
+        color: var(--amber-ink);
+        line-height: 1.35;
+      }
+      .params .grid {
+        display: flex;
+        gap: 26px;
+        margin-top: 12px;
+        font-size: 21px;
+        color: var(--app-ink);
+      }
+      .params .grid b {
+        font-weight: 900;
+      }
+      .review-line {
+        margin-top: 16px;
+        font-size: 21px;
+        color: var(--app-dim);
+        opacity: 0;
+      }
+      .review-line b {
+        color: var(--app-ink);
+      }
+      .cat {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: var(--card);
+        border: 2px solid var(--line);
+        border-radius: 10px;
+        padding: 20px 22px;
+        margin-bottom: 16px;
+        opacity: 0;
+      }
+      .cat .name {
+        font-size: 25px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        width: 280px;
+        flex: none;
+      }
+      .cat .arrow {
+        color: var(--app-dim);
+        font-size: 22px;
+        flex: none;
+      }
+      .cat .state {
+        font-size: 21px;
+        color: var(--app-dim);
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .cat .state b {
+        color: var(--app-ink);
+        font-weight: 700;
+      }
+
+      /* ============================================================
+         SCENE 7 — the gate
+         ============================================================ */
+      .gate {
+        position: absolute;
+        left: 96px;
+        top: 132px;
+        width: 1060px;
+        background: rgba(240, 169, 59, 0.09);
+        border: 3px solid var(--amber);
+        border-radius: 14px;
+        padding: 34px 38px 32px;
+      }
+      .gate-svg {
+        position: absolute;
+        inset: -3px;
+        width: calc(100% + 6px);
+        height: calc(100% + 6px);
+        pointer-events: none;
+        overflow: visible;
+      }
+      .gate-svg path {
+        fill: none;
+        stroke: var(--amber);
+        stroke-width: 5;
+      }
+      .gate .paused {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        opacity: 0;
+      }
+      .gate .paused .txt {
+        font-size: 76px;
+        font-weight: 900;
+        letter-spacing: -0.035em;
+        color: var(--amber);
+        line-height: 1;
+      }
+      .gate .paused .lab {
+        font-size: 21px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--ink-dim);
+        border-left: 3px solid rgba(240, 169, 59, 0.6);
+        padding-left: 20px;
+        line-height: 1.5;
+      }
+      .gate ul {
+        list-style: none;
+        margin: 26px 0 0;
+        padding: 0;
+      }
+      .gate li {
+        display: flex;
+        gap: 16px;
+        font-size: 26px;
+        line-height: 1.42;
+        color: var(--ink);
+        margin-bottom: 16px;
+        opacity: 0;
+      }
+      .gate li .bx {
+        flex: none;
+        width: 15px;
+        height: 15px;
+        margin-top: 12px;
+        background: var(--amber);
+      }
+      .gate li b {
+        color: var(--amber);
+        font-weight: 700;
+      }
+      .next-stage {
+        position: absolute;
+        left: 1204px;
+        top: 132px;
+        width: 620px;
+        background: rgba(232, 237, 244, 0.05);
+        border: 3px dashed rgba(232, 237, 244, 0.22);
+        border-radius: 14px;
+        padding: 30px 32px;
+        opacity: 0;
+      }
+      .next-stage .hdr {
+        font-size: 18px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgba(232, 237, 244, 0.4);
+        margin-bottom: 16px;
+      }
+      .next-stage .big {
+        font-size: 33px;
+        font-weight: 900;
+        letter-spacing: -0.025em;
+        line-height: 1.28;
+        color: rgba(232, 237, 244, 0.42);
+      }
+      .next-stage .big span {
+        display: block;
+        color: rgba(232, 237, 244, 0.28);
+        font-size: 26px;
+        margin-top: 8px;
+      }
+      .next-stage .lock {
+        margin-top: 22px;
+        font-size: 20px;
+        color: rgba(232, 237, 244, 0.4);
+        line-height: 1.5;
+      }
+      .req {
+        position: absolute;
+        left: 1204px;
+        top: 470px;
+        width: 620px;
+        opacity: 0;
+      }
+      .req .h {
+        font-size: 19px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--amber);
+        margin-bottom: 14px;
+      }
+      .req .i {
+        font-size: 22px;
+        color: var(--ink);
+        line-height: 1.5;
+        padding: 11px 0;
+        border-bottom: 2px solid rgba(232, 237, 244, 0.12);
+        display: flex;
+        gap: 14px;
+      }
+      .req .i:last-child {
+        border-bottom: 0;
+      }
+      .req .i::before {
+        content: "";
+        flex: none;
+        width: 8px;
+        height: 8px;
+        margin-top: 12px;
+        background: var(--ink-dim);
+      }
+
+      /* ============================================================
+         SCENE 8 — final frame
+         ============================================================ */
+      .final-head {
+        position: absolute;
+        left: 96px;
+        top: 150px;
+        width: 1728px;
+        opacity: 0;
+      }
+      .final-head .k {
+        font-size: 21px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--ink-dim);
+      }
+      .final-head .t {
+        font-size: 62px;
+        font-weight: 900;
+        letter-spacing: -0.035em;
+        margin-top: 12px;
+        line-height: 1.1;
+      }
+      .final-head .t em {
+        font-style: normal;
+        color: var(--amber);
+      }
+      .stage-chain {
+        position: absolute;
+        left: 96px;
+        top: 340px;
+        width: 1728px;
+        display: flex;
+        gap: 14px;
+        align-items: stretch;
+      }
+      .stg {
+        flex: 1;
+        background: rgba(232, 237, 244, 0.06);
+        border: 2px solid rgba(232, 237, 244, 0.18);
+        border-radius: 10px;
+        padding: 18px 16px 16px;
+        opacity: 0;
+      }
+      .stg .n {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--ink-dim);
+        letter-spacing: 0.1em;
+      }
+      .stg .t {
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.28;
+        margin-top: 9px;
+        color: var(--ink);
+      }
+      .stg .tick {
+        display: block;
+        width: 26px;
+        height: 26px;
+        margin-top: 14px;
+      }
+      .stg .tick path {
+        fill: none;
+        stroke: var(--green);
+        stroke-width: 3.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .paused-bar {
+        position: absolute;
+        left: 96px;
+        top: 566px;
+        width: 1728px;
+        display: flex;
+        align-items: center;
+        gap: 26px;
+        background: rgba(240, 169, 59, 0.12);
+        border: 3px solid var(--amber);
+        border-radius: 12px;
+        padding: 26px 34px;
+        opacity: 0;
+      }
+      .paused-bar .dot {
+        width: 20px;
+        height: 20px;
+        background: var(--amber);
+        flex: none;
+      }
+      .paused-bar .t {
+        font-size: 40px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        color: var(--amber);
+      }
+      .paused-bar .s {
+        font-size: 24px;
+        color: var(--ink-dim);
+        margin-left: auto;
+        text-align: right;
+        max-width: 720px;
+        line-height: 1.4;
+      }
+      .footer {
+        position: absolute;
+        left: 96px;
+        top: 706px;
+        width: 1728px;
+      }
+      .footer .ln {
+        font-size: 27px;
+        line-height: 1.45;
+        color: var(--ink);
+        margin-bottom: 12px;
+        opacity: 0;
+        max-width: 1620px;
+      }
+      .footer .ln b {
+        font-weight: 900;
+      }
+      .footer .ln.dim {
+        color: var(--ink-dim);
+        font-size: 24px;
+      }
+      .footer .ln.mark {
+        border-left: 4px solid var(--amber);
+        padding-left: 16px;
+        color: var(--ink-dim);
+        font-size: 24px;
+      }
+
+      /* ============ player chrome (not part of the composition) ============ */
+      html.hf-player,
+      body.hf-player {
+        height: 100%;
+        overflow: hidden;
+        background: #05070b;
+      }
+      body.hf-player {
+        position: relative;
+      }
+      #root {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform-origin: 0 0;
+      }
+      .hf-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999;
+        padding: 10px 18px 12px;
+        background: rgba(5, 7, 11, 0.96);
+        border-top: 1px solid rgba(232, 237, 244, 0.14);
+        font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+        color: #e8edf4;
+        user-select: none;
+      }
+      .hf-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .hf-btn {
+        flex: none;
+        font: 700 15px/1 Montserrat, Arial, sans-serif;
+        letter-spacing: 0.02em;
+        color: #e8edf4;
+        background: rgba(232, 237, 244, 0.08);
+        border: 1px solid rgba(232, 237, 244, 0.2);
+        border-radius: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .hf-btn:hover {
+        background: rgba(240, 169, 59, 0.16);
+        border-color: rgba(240, 169, 59, 0.6);
+      }
+      .hf-btn:focus-visible,
+      .hf-chip:focus-visible,
+      .hf-seek:focus-visible {
+        outline: 2px solid #f0a93b;
+        outline-offset: 2px;
+      }
+      .hf-btn svg {
+        width: 13px;
+        height: 13px;
+        fill: currentColor;
+      }
+      .hf-time {
+        flex: none;
+        font: 400 15px/1 "IBM Plex Mono", monospace;
+        color: #98a2b3;
+        min-width: 104px;
+        text-align: center;
+      }
+      .hf-seek {
+        position: relative;
+        flex: 1;
+        height: 26px;
+        cursor: pointer;
+        touch-action: none;
+        border-radius: 999px;
+      }
+      .hf-track,
+      .hf-fill,
+      .hf-head {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+      .hf-track {
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: rgba(232, 237, 244, 0.14);
+        border-radius: 999px;
+      }
+      .hf-fill {
+        left: 0;
+        width: 0;
+        height: 8px;
+        background: #f0a93b;
+        border-radius: 999px;
+      }
+      .hf-head {
+        left: 0;
+        width: 3px;
+        height: 18px;
+        background: #fff;
+        border-radius: 2px;
+        margin-left: -1.5px;
+      }
+      .hf-tick {
+        position: absolute;
+        top: 50%;
+        width: 1px;
+        height: 16px;
+        margin-top: -8px;
+        background: rgba(5, 7, 11, 0.85);
+        border-left: 1px solid rgba(232, 237, 244, 0.5);
+        pointer-events: none;
+      }
+      .hf-scenes {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .hf-chip {
+        font: 700 13px/1 Montserrat, Arial, sans-serif;
+        letter-spacing: 0.03em;
+        color: #98a2b3;
+        background: transparent;
+        border: 1px solid rgba(232, 237, 244, 0.18);
+        border-radius: 999px;
+        padding: 7px 12px;
+        cursor: pointer;
+        transition: color 0.15s ease, border-color 0.15s ease,
+          background 0.15s ease;
+      }
+      .hf-chip b {
+        color: #f0a93b;
+        margin-right: 6px;
+      }
+      .hf-chip:hover {
+        color: #e8edf4;
+        border-color: rgba(240, 169, 59, 0.6);
+      }
+      .hf-chip[aria-current="true"] {
+        color: #0a0d13;
+        background: #f0a93b;
+        border-color: #f0a93b;
+      }
+      .hf-chip[aria-current="true"] b {
+        color: #0a0d13;
+      }
+      .hf-hint {
+        margin-left: auto;
+        font: 400 13px/1.5 "IBM Plex Mono", monospace;
+        color: rgba(152, 162, 179, 0.8);
+        white-space: nowrap;
+      }
+      .hf-error {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        text-align: center;
+        font: 700 20px/1.6 Montserrat, Arial, sans-serif;
+        color: #e8edf4;
+        background: #05070b;
+      }
+      @media (max-width: 1100px) {
+        .hf-hint {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-start="0"
+      data-width="1920"
+      data-height="1080"
+      data-duration="100"
+    >
+      <!-- ===================== stage ===================== -->
+      <div class="stage-grid">
+        <svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M48 0 L0 0 0 48" fill="none" stroke="#e8edf4" stroke-width="1" opacity="0.05" />
+            </pattern>
+          </defs>
+          <rect width="1920" height="1080" fill="url(#grid)" />
+        </svg>
+      </div>
+      <div class="stage-glow"></div>
+      <div class="recon-note">
+        <b>Reconstructed interface</b> · not a screenshot<br />
+        no pixel-perfect claim
+      </div>
+
+      <!-- ===================== SCENE 1 ===================== -->
+      <section id="scene-1" class="scene clip" data-start="0" data-duration="14" data-track-index="1">
+        <div class="world" id="w1">
+          <div class="marker">
+            <span class="num mono">01</span>
+            <span class="name">Company setup</span>
+            <span class="rule"></span>
+            <span class="num mono" style="color: var(--green)">IMPLEMENTED</span>
+          </div>
+
+          <div class="win win-app" id="s1-win">
+            <div class="win-bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="mono">app.tarkado.internal / admin / setup</span>
+              <span class="badge b-green" style="margin-left: auto">Implemented</span>
+            </div>
+            <div class="win-body">
+              <div id="s1-left">
+                <h1 class="h1">Company setup</h1>
+                <p class="sub">First administrator, identity, roles and permissions.</p>
+
+                <div class="step" id="s1-a">
+                  <span class="tick"
+                    ><svg viewBox="0 0 16 16"><path d="M2 8.5 L6 12.5 L14 3.5" fill="none" stroke="#166b48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg
+                  ></span>
+                  <span class="txt"
+                    >First administrator created explicitly<span>No pre-existing admin, no inherited account</span></span
+                  >
+                </div>
+                <div class="step" id="s1-b">
+                  <span class="tick"
+                    ><svg viewBox="0 0 16 16"><path d="M2 8.5 L6 12.5 L14 3.5" fill="none" stroke="#166b48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg
+                  ></span>
+                  <span class="txt"
+                    >Individual login · authenticator MFA confirmed<span
+                      >Second factor verified on the administrator's own device</span
+                    ></span
+                  >
+                  <span class="badge b-green">MFA confirmed</span>
+                </div>
+                <div class="step" id="s1-c">
+                  <span class="tick"
+                    ><svg viewBox="0 0 16 16"><path d="M2 8.5 L6 12.5 L14 3.5" fill="none" stroke="#166b48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg
+                  ></span>
+                  <span class="txt"
+                    >Invited <b>Maya</b> and <b>Arjun</b><span
+                      >Individual accounts · developer roles assigned to each</span
+                    ></span
+                  >
+                  <span class="badge b-green">2 invites</span>
+                </div>
+                <div class="step" id="s1-e">
+                  <span class="tick"
+                    ><svg viewBox="0 0 16 16"><path d="M2 8.5 L6 12.5 L14 3.5" fill="none" stroke="#166b48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /></svg
+                  ></span>
+                  <span class="txt"
+                    >Pilot-approver permission designated separately<span
+                      >Held apart from the developer role, granted explicitly</span
+                    ></span
+                  >
+                  <span class="badge b-amber">Separate grant</span>
+                </div>
+
+                <span id="s1-btn" class="mono">Send invitations →</span>
+              </div>
+
+              <div id="s1-right">
+                <div class="card">
+                  <div class="lbl">Approved model registry</div>
+                  <div class="reg-row" id="s1-r1">
+                    <span class="m mono">fixture/premium</span>
+                    <span class="badge b-amber">Premium fallback</span>
+                  </div>
+                  <div class="reg-row" id="s1-r2">
+                    <span class="m mono">fixture/standard</span>
+                    <span class="badge b-grey">Approved</span>
+                  </div>
+                  <div class="reg-row" id="s1-r3">
+                    <span class="m mono">fixture/cheap</span>
+                    <span class="badge b-grey">Approved</span>
+                  </div>
+                  <div class="scope-note" id="s1-scope">
+                    <b>Collection scope declared up front:</b> approved repositories only, plus
+                    task metadata. Prompt bodies, source files, outputs and credentials are outside
+                    scope and are not transmitted.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="caption" id="s1-cap">
+            <p class="main">Company-controlled identities, models, and collection scope.</p>
+            <p class="sec">No existing company SSO required.</p>
+          </div>
+
+          <div class="cursor" id="cur1">
+            <svg viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 2 L2 30 L10 23 L15 34 L21 31 L16 20 L26 19 Z" fill="#f0a93b" stroke="#0a0d13" stroke-width="2" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <span class="ripple" id="rip1"></span>
+        </div>
+      </section>
+
+      <!-- ===================== SCENE 2 ===================== -->
+      <section id="scene-2" class="scene clip" data-start="14" data-duration="14" data-track-index="1">
+        <div class="world" id="w2">
+          <div class="marker">
+            <span class="num mono">02</span>
+            <span class="name">Explicit task observation</span>
+            <span class="rule"></span>
+            <span class="num mono" style="color: var(--amber)">LIMITED</span>
+          </div>
+
+          <div class="win win-term" id="s2-win">
+            <div class="win-bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="mono">OpenCode — task session (reconstructed)</span>
+              <span class="badge dark" style="margin-left: auto">Connector source reconstructed</span>
+            </div>
+            <div class="win-body">
+              <div id="s2-term">
+                <div class="tline" id="s2-l1"><span class="g">maya@workstation</span>:<span class="d">~/repo</span> $ opencode</div>
+                <div class="tline" id="s2-l2"><span class="d">session idle · awaiting instruction</span></div>
+                <div class="tline" id="s2-l3"><span class="a">tarkado</span> <span class="d">explicit task start observed</span></div>
+                <div class="tline" id="s2-l4"><span class="d">root task · eligible · no subagent</span></div>
+                <div class="tline" id="s2-l5"><span class="d">scope → metadata only</span></div>
+                <div class="tline" id="s2-l6"><span class="a">no plugin install · no session capture</span></div>
+                <div class="tline" id="s2-l7"><span class="g">observation code: implemented</span></div>
+              </div>
+
+              <div id="s2-panel">
+                <div class="panel-title" id="s2-pt">
+                  <span class="t">Tarkado task panel <span style="font-weight: 400; color: #8b949e">· reconstructed</span></span>
+                  <span class="badge dark">Metadata only</span>
+                </div>
+
+                <div class="field" id="s2-f1">
+                  <span class="k">Task start</span>
+                  <span class="v ok">Explicit · root task · while idle</span>
+                </div>
+                <div class="field" id="s2-f2">
+                  <span class="k">Category</span>
+                  <span class="v mono">documentation</span>
+                </div>
+                <div class="field" id="s2-f3">
+                  <span class="k">Declared risk</span>
+                  <span class="v mono">low</span>
+                </div>
+                <div class="field" id="s2-f4">
+                  <span class="k">Original model</span>
+                  <span class="v mono">fixture/premium</span>
+                </div>
+                <div class="field" id="s2-f5">
+                  <span class="k">Repository scope</span>
+                  <span class="v ok">Approved</span>
+                </div>
+                <div class="field" id="s2-f6">
+                  <span class="k">Tool / context</span>
+                  <span class="v ok">Requirements approved</span>
+                </div>
+
+                <div class="conn" id="s2-conn">
+                  <span class="chip">OpenCode task</span>
+                  <svg viewBox="0 0 300 26" preserveAspectRatio="none">
+                    <path id="s2-wire" data-draw d="M2 13 L298 13" />
+                  </svg>
+                  <span class="chip hi">Tarkado company service</span>
+                </div>
+                <div class="conn-note" id="s2-note">
+                  <b>Metadata only.</b> No prompt bodies, source files, outputs or credentials are
+                  transmitted.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="caption" id="s2-cap">
+            <p class="main">Explicit task starts and scoped observation code <em>are implemented</em>.</p>
+            <p class="sec">Automatic task/subagent discovery is not shown or claimed.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SCENE 3 ===================== -->
+      <section id="scene-3" class="scene clip" data-start="28" data-duration="13" data-track-index="1">
+        <div class="world" id="w3">
+          <div class="marker">
+            <span class="num mono">03</span>
+            <span class="name">Manual shadow suggestion</span>
+            <span class="rule"></span>
+            <span class="num mono" style="color: var(--green)">IMPLEMENTED</span>
+          </div>
+
+          <div class="win win-term" id="s3-win">
+            <div class="win-bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="mono">OpenCode — model panel (reconstructed)</span>
+              <span class="badge dark" style="margin-left: auto">Choice stays manual</span>
+            </div>
+            <div class="win-body">
+              <div id="s3-left">
+                <div class="sugg" id="s3-card">
+                  <div class="row">
+                    <span class="k">Current selection</span>
+                    <span class="v mono" id="s3-cur">fixture/premium</span>
+                  </div>
+                  <div class="row">
+                    <span class="k">Suggestion</span>
+                    <span class="v mono a">fixture/cheap</span>
+                  </div>
+                  <div class="row">
+                    <span class="k">Reason</span>
+                    <span class="v">Supported policy / category evidence</span>
+                  </div>
+                  <div class="row">
+                    <span class="k">Confidence</span>
+                    <span class="v" style="display: flex; align-items: center; gap: 16px">
+                      <span class="conf-track"><span class="conf-fill" id="s3-conf"></span></span>
+                      <span style="font-size: 20px; color: #8b949e">limited · explanatory</span>
+                    </span>
+                  </div>
+                  <div class="row">
+                    <span class="k">Fallback</span>
+                    <span class="v mono">fixture/premium</span>
+                  </div>
+                </div>
+
+                <div class="btns" id="s3-btns">
+                  <span class="btn primary" id="s3-accept">Accept for this task</span>
+                  <span class="btn" id="s3-reject">Reject</span>
+                  <span class="btn" id="s3-details">View details</span>
+                </div>
+
+                <div id="s3-accepted">
+                  Preference recorded · model choice remains manual.
+                  <span>Acceptance records a preference. It is not success, not model approval, not pilot authorization.</span>
+                </div>
+              </div>
+
+              <div id="s3-right">
+                <div class="picker" id="s3-picker">
+                  <div class="lbl" style="color: #8b949e">Manual model selection</div>
+                  <div class="sel">
+                    <span class="mono" id="s3-selval">fixture/premium</span>
+                    <span class="caret">▾</span>
+                  </div>
+                  <div class="opt mono" id="s3-o1">fixture/premium</div>
+                  <div class="opt mono" id="s3-o2">fixture/standard</div>
+                  <div class="opt mono" id="s3-o3">fixture/cheap</div>
+                  <div class="cap">
+                    A separate, deliberate selection by Maya — an independent gesture, not a
+                    consequence of the suggestion.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="caption" id="s3-cap">
+            <p class="main">Acceptance is <em>not</em> success, model approval, or pilot authorization.</p>
+            <p class="note">No duplicate alternative-model requests.</p>
+          </div>
+
+          <div class="cursor" id="cur3">
+            <svg viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 2 L2 30 L10 23 L15 34 L21 31 L16 20 L26 19 Z" fill="#f0a93b" stroke="#0a0d13" stroke-width="2" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <span class="ripple" id="rip3"></span>
+        </div>
+      </section>
+
+      <!-- ===================== SCENE 4 ===================== -->
+      <section id="scene-4" class="scene clip" data-start="41" data-duration="13" data-track-index="1">
+        <div class="world" id="w4">
+          <div class="marker">
+            <span class="num mono">04</span>
+            <span class="name">Linked actual-model and result records</span>
+            <span class="rule"></span>
+            <span class="num mono" style="color: var(--green)">IMPLEMENTED</span>
+          </div>
+
+          <div class="win win-app" id="s4-win">
+            <div class="win-bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="mono">app.tarkado.internal / evidence / T-0879</span>
+              <span class="badge b-green" style="margin-left: auto">Implemented</span>
+            </div>
+            <div class="win-body" style="flex-direction: column">
+              <div class="chain">
+                <div class="node" id="s4-n1">
+                  <div class="step-n">1 · Recommendation</div>
+                  <div class="big mono">fixture/cheap</div>
+                  <div class="meta">REC-0142 · Maya · suggested only</div>
+                </div>
+                <div class="link"><svg viewBox="0 0 74 30"><path id="s4-p1" data-draw d="M2 15 L60 15 M52 8 L60 15 L52 22" /></svg></div>
+                <div class="node" id="s4-n2">
+                  <div class="step-n">2 · Response</div>
+                  <div class="big">Accepted</div>
+                  <div class="meta">RESP-0142 · preference recorded</div>
+                </div>
+                <div class="link"><svg viewBox="0 0 74 30"><path id="s4-p2" data-draw d="M2 15 L60 15 M52 8 L60 15 L52 22" /></svg></div>
+                <div class="node" id="s4-n3">
+                  <div class="step-n">3 · Reported actual model</div>
+                  <div class="big mono">fixture/cheap</div>
+                  <div class="meta">Maya's own report · manual entry</div>
+                </div>
+                <div class="link"><svg viewBox="0 0 74 30"><path id="s4-p3" data-draw d="M2 15 L60 15 M52 8 L60 15 L52 22" /></svg></div>
+                <div class="node" id="s4-n4">
+                  <div class="step-n">4 · Reported result</div>
+                  <div class="big">Completed</div>
+                  <div class="meta">Reported by Maya · not verified</div>
+                </div>
+              </div>
+
+              <div class="distinguish">
+                <div class="dist-card sys" id="s4-d1">
+                  <div class="t">Request completion</div>
+                  <div class="d">
+                    The transport finished. A system-level fact about the call — nothing about
+                    whether the work was right.
+                  </div>
+                </div>
+                <div class="dist-card hum" id="s4-d2">
+                  <div class="t">Human-reported engineering outcome</div>
+                  <div class="d">
+                    Maya's judgement about the change, entered afterwards.
+                    <b>Outcome reported — not independently verified.</b>
+                  </div>
+                </div>
+              </div>
+
+              <div class="unverified" id="s4-uv">
+                <span class="badge b-amber">Outcome reported — not independently verified</span>
+                <span class="ref mono">confirmation ref: <b>SYN-8831-KD</b> · synthetic</span>
+              </div>
+
+              <div class="other-task" id="s4-other">
+                <span class="badge b-grey mono">T-0907</span>
+                <span><b>fixture/standard</b> ran this task</span>
+                <span style="color: var(--app-dim)">→</span>
+                <span>The actual model receives its result — <b>not the unused suggestion</b>.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="caption" id="s4-cap">
+            <p class="main">Recommendation, response, reported model and reported result are linked — and kept apart.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SCENE 5 ===================== -->
+      <section id="scene-5" class="scene clip" data-start="54" data-duration="13" data-track-index="1">
+        <div class="world" id="w5">
+          <div class="marker">
+            <span class="num mono">05</span>
+            <span class="name">Retain everyone's evidence</span>
+            <span class="rule"></span>
+            <span class="num mono" style="color: var(--green)">IMPLEMENTED</span>
+          </div>
+
+          <div class="win win-app" id="s5-win">
+            <div class="win-bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="mono">app.tarkado.internal / evidence / all-participants</span>
+              <span class="badge b-green" style="margin-left: auto">Implemented</span>
+            </div>
+            <div class="win-body" style="flex-direction: column">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Actor · role at time</th>
+                    <th>Model used</th>
+                    <th>Response</th>
+                    <th>Outcome</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="r" id="s5-r1">
+                    <td class="mono">T-0881 · doc · session 04</td>
+                    <td>Maya · senior</td>
+                    <td class="mono">fixture/cheap</td>
+                    <td><span class="badge b-green">Accepted</span></td>
+                    <td><span class="badge b-green">Completed</span></td>
+                  </tr>
+                  <tr class="r" id="s5-r2">
+                    <td class="mono">T-0884 · doc · session 11</td>
+                    <td>Maya · senior</td>
+                    <td class="mono">fixture/cheap</td>
+                    <td><span class="badge b-green">Accepted</span></td>
+                    <td><span class="badge b-green">Completed</span></td>
+                  </tr>
+                  <tr class="r" id="s5-r3">
+                    <td class="mono">T-0890 · test generation</td>
+                    <td>Arjun · junior</td>
+                    <td class="mono">fixture/standard</td>
+                    <td><span class="badge b-green">Accepted</span></td>
+                    <td><span class="badge b-red">Failed</span></td>
+                  </tr>
+                  <tr class="r" id="s5-r4">
+                    <td class="mono">T-0893 · refactor</td>
+                    <td>Maya · senior</td>
+                    <td class="mono">fixture/premium</td>
+                    <td><span class="badge b-red">Rejected</span></td>
+                    <td><span class="badge b-grey">Not run</span></td>
+                  </tr>
+                  <tr class="r" id="s5-r5">
+                    <td class="mono">T-0896 · doc</td>
+                    <td>Maya · senior</td>
+                    <td class="mono">fixture/premium</td>
+                    <td><span class="badge b-amber">Override</span></td>
+                    <td><span class="badge b-green">Completed</span></td>
+                  </tr>
+                  <tr class="r" id="s5-r6">
+                    <td class="mono">T-0899 · doc</td>
+                    <td>Arjun · junior</td>
+                    <td class="mono">fixture/standard</td>
+                    <td><span class="badge b-green">Accepted</span></td>
+                    <td><span class="badge b-grey">Unknown</span></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="counts">
+                <div class="count pos" id="s5-c1">
+                  <span class="n mono">0</span>
+                  <span class="cap">Positive</span>
+                  <small>reported completed</small>
+                </div>
+                <div class="count neg" id="s5-c2">
+                  <span class="n mono">0</span>
+                  <span class="cap">Negative</span>
+                  <small>reported failed</small>
+                </div>
+                <div class="count pend" id="s5-c3">
+                  <span class="n mono">0</span>
+                  <span class="cap">Pending</span>
+                  <small>outcome unknown</small>
+                </div>
+                <div class="count" id="s5-c4">
+                  <span class="n mono" style="color: var(--grey-ink)">0</span>
+                  <span class="cap">Not run</span>
+                  <small>rejected before execution</small>
+                </div>
+              </div>
+
+              <div class="role-note" id="s5-role">
+                Historical roles stay attached to their original actions — Arjun's record stays
+                junior, Maya's stays senior, whatever changes later.
+              </div>
+            </div>
+          </div>
+
+          <div class="caption" id="s5-cap">
+            <p class="main">Senior feedback is prioritized. <em>Junior failures and unknowns remain visible.</em></p>
+            <p class="sec">Results are shown only where a model was actually used — nothing is invented for a model that never ran.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SCENE 6 ===================== -->
+      <section id="scene-6" class="scene clip" data-start="67" data-duration="14" data-track-index="1">
+        <div class="world" id="w6">
+          <div class="marker">
+            <span class="num mono">06</span>
+            <span class="name">Experimental learning &amp; category review</span>
+            <span class="rule"></span>
+            <span class="num mono" style="color: var(--green)">IMPLEMENTED</span>
+          </div>
+
+          <div class="win win-app" id="s6-win">
+            <div class="win-bar">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="mono">app.tarkado.internal / learning / review</span>
+              <span class="badge b-green" style="margin-left: auto">Implemented</span>
+            </div>
+            <div class="win-body">
+              <div id="s6-left">
+                <div class="plan" id="s6-plan">
+                  <div class="lbl">Validation plan · explicit</div>
+                  <div class="selrow">
+                    <div class="selbox">
+                      <div class="k">Session selector</div>
+                      <div class="v mono">Session 04 · Session 11</div>
+                    </div>
+                    <div class="selbox">
+                      <div class="k">Category selector</div>
+                      <div class="v mono">documentation</div>
+                    </div>
+                  </div>
+                  <div class="freeze" id="s6-freeze">
+                    <span class="chipx">cutoff <b class="mono">2026-09-14</b></span>
+                    <span class="chipx">version <b class="mono">v0.3.1-exp</b></span>
+                    <span class="chipx">frozen</span>
+                  </div>
+                  <div class="params" id="s6-params">
+                    <div class="warn">Demonstration parameters — not production-approved thresholds.</div>
+                    <div class="grid">
+                      <span>min sessions <b class="mono">6</b></span>
+                      <span>success floor <b class="mono">0.60</b></span>
+                      <span>hold-out <b class="mono">none</b></span>
+                    </div>
+                  </div>
+                  <div class="review-line" id="s6-review">
+                    <b>Review before publication.</b> Future manual suggestions are proposed, not
+                    shipped — nothing retrains silently.
+                  </div>
+                </div>
+              </div>
+
+              <div id="s6-right">
+                <div class="cat" id="s6-k1">
+                  <span class="name">Documentation</span>
+                  <span class="arrow">→</span>
+                  <span class="state"><b>Ready for local review</b></span>
+                  <span class="badge b-green">Ready</span>
+                </div>
+                <div class="cat" id="s6-k2">
+                  <span class="name">Test generation</span>
+                  <span class="arrow">→</span>
+                  <span class="state"><b>Blocked</b> · failure and rejection retained</span>
+                  <span class="badge b-red">Blocked</span>
+                </div>
+                <div class="cat" id="s6-k3">
+                  <span class="name">Unsupported work</span>
+                  <span class="arrow">→</span>
+                  <span class="state"><b>Approved fallback</b> — not a new policy</span>
+                  <span class="badge b-amber">Fallback</span>
+                </div>
+                <div class="cat" id="s6-k4" style="border-left: 6px solid var(--amber)">
+                  <span class="name">Nothing publishes itself</span>
+                  <span class="state" style="text-align: right"
+                    >A person approves every category result</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="caption" id="s6-cap">
+            <p class="main">Versioned proposals. Explicit review. <em><span class="mh-highlight-wrap"><span class="mh-highlight-bar" id="s6-hl"></span><span class="copy">No silent retraining.</span></span></em></p>
+            <p class="sec">Local category review is not production readiness.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SCENE 7 ===================== -->
+      <section id="scene-7" class="scene clip" data-start="81" data-duration="12" data-track-index="1">
+        <div class="world" id="w7">
+          <div class="marker">
+            <span class="num mono">07</span>
+            <span class="name">Independent readiness</span>
+            <span class="rule"></span>
+            <span class="num mono" style="color: var(--amber)">NOT CONNECTED TO REAL EVIDENCE</span>
+          </div>
+
+          <div class="gate" id="s7-gate">
+            <svg
+              class="gate-svg"
+              viewBox="0 0 1060 600"
+              preserveAspectRatio="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                id="s7-gate-path"
+                data-draw
+                d="M15 3 H1045 A12 12 0 0 1 1057 15 V585 A12 12 0 0 1 1045 597 H15 A12 12 0 0 1 3 585 V15 A12 12 0 0 1 15 3 Z"
+              />
+            </svg>
+            <div class="paused" id="s7-paused">
+              <span class="txt">PAUSED HERE</span>
+              <span class="lab">Live-pilot approval<br />is not reached</span>
+            </div>
+            <ul>
+              <li id="s7-li1"><span class="bx"></span><span><b>Live-authorization mechanics are implemented.</b></span></li>
+              <li id="s7-li2"><span class="bx"></span><span>Positive approval requires an <b>independent company readiness assessment</b>.</span></li>
+              <li id="s7-li3"><span class="bx"></span><span><b>Shipped verifiers refuse by default.</b></span></li>
+              <li id="s7-li4"><span class="bx"></span><span>Positive tests use <b>controlled evidence — not a real company verifier</b>.</span></li>
+            </ul>
+          </div>
+
+          <div class="next-stage" id="s7-next">
+            <div class="hdr">Next stage · not shown</div>
+            <div class="big">
+              Separate live pilot approval
+              <span>→ actual bounded execution</span>
+            </div>
+            <div class="lock">
+              No approval, activation, provider execution, notification or external alert is
+              animated in this demonstration.
+            </div>
+          </div>
+
+          <div class="req" id="s7-req">
+            <div class="h">Still required before any of it</div>
+            <div class="i">Real company evidence</div>
+            <div class="i">Validated criteria</div>
+            <div class="i">Installed-host behaviour</div>
+            <div class="i">Deployment approval</div>
+          </div>
+
+          <div class="caption" id="s7-cap" style="top: 800px; width: 1060px">
+            <p class="main" style="font-size: 32px">
+              The walkthrough stops at the first unsatisfied real-evidence gate.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SCENE 8 ===================== -->
+      <section id="scene-8" class="scene clip" data-start="93" data-duration="7" data-track-index="1">
+        <div class="world" id="w8">
+          <div class="marker">
+            <span class="num mono">08</span>
+            <span class="name">Stages reached</span>
+            <span class="rule"></span>
+          </div>
+
+          <div class="final-head" id="s8-head">
+            <div class="k">Controlled demonstration · record of progress</div>
+            <div class="t">Six stages reached. <em>The seventh is a deliberate stop.</em></div>
+          </div>
+
+          <div class="stage-chain">
+            <div class="stg" id="s8-s1"><div class="n mono">01</div><div class="t">Company setup</div><svg class="tick" viewBox="0 0 26 26"><path id="s8-t1" data-draw d="M3 14 L10 21 L23 5" /></svg></div>
+            <div class="stg" id="s8-s2"><div class="n mono">02</div><div class="t">Explicit task observation</div><svg class="tick" viewBox="0 0 26 26"><path id="s8-t2" data-draw d="M3 14 L10 21 L23 5" /></svg></div>
+            <div class="stg" id="s8-s3"><div class="n mono">03</div><div class="t">Manual recommendation</div><svg class="tick" viewBox="0 0 26 26"><path id="s8-t3" data-draw d="M3 14 L10 21 L23 5" /></svg></div>
+            <div class="stg" id="s8-s4"><div class="n mono">04</div><div class="t">Linked feedback / results</div><svg class="tick" viewBox="0 0 26 26"><path id="s8-t4" data-draw d="M3 14 L10 21 L23 5" /></svg></div>
+            <div class="stg" id="s8-s5"><div class="n mono">05</div><div class="t">Experimental learning</div><svg class="tick" viewBox="0 0 26 26"><path id="s8-t5" data-draw d="M3 14 L10 21 L23 5" /></svg></div>
+            <div class="stg" id="s8-s6"><div class="n mono">06</div><div class="t">Category review</div><svg class="tick" viewBox="0 0 26 26"><path id="s8-t6" data-draw d="M3 14 L10 21 L23 5" /></svg></div>
+          </div>
+
+          <div class="paused-bar" id="s8-pause">
+            <span class="dot"></span>
+            <span class="t">PAUSED: independent real readiness</span>
+            <span class="s">Real company evidence, validated criteria, installed-host behaviour and deployment approval are still required.</span>
+          </div>
+
+          <div class="footer">
+            <div class="ln" id="s8-f1"><b>Recorded verification: 880 Python / 47 JavaScript tests passing.</b></div>
+            <div class="ln dim" id="s8-f2">Regression tests — not proof of production readiness, quality, or savings.</div>
+            <div class="ln mark" id="s8-f3">
+              Other conditional pilot/accounting components exist, but are intentionally not
+              presented as a completed real-deployment continuation.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== persistent honesty layer ===================== -->
+      <div id="connector-tag" class="connector-tag clip" data-start="14" data-duration="27" data-track-index="6">
+        Connector source implemented · installed-host validation pending
+      </div>
+
+      <div id="honesty-bar" class="honesty clip" data-start="0" data-duration="100" data-track-index="5">
+        <span class="honesty-tag"><span class="pip"></span>Implemented mechanics · controlled demonstration</span>
+        <span class="rail">
+          <span class="seg" style="flex: 14"><i id="rail-1"></i></span>
+          <span class="seg" style="flex: 14"><i id="rail-2"></i></span>
+          <span class="seg" style="flex: 13"><i id="rail-3"></i></span>
+          <span class="seg" style="flex: 13"><i id="rail-4"></i></span>
+          <span class="seg" style="flex: 13"><i id="rail-5"></i></span>
+          <span class="seg" style="flex: 14"><i id="rail-6"></i></span>
+          <span class="seg" style="flex: 12"><i id="rail-7"></i></span>
+          <span class="seg" style="flex: 7"><i id="rail-8"></i></span>
+        </span>
+      </div>
+    </div>
+
+    <script>
+      /* ============================================================
+         Tarkado · current implementation walkthrough
+         ONE paused, seek-safe timeline. All times are GLOBAL seconds.
+         Motion doctrine (frame.md): power3 long-tail settles, sequential
+         reveal across each scene's back half, cut-the-curve leftward seams,
+         no repeat/yoyo, no breathing loops, scene 7 holds perfectly still.
+         ============================================================ */
+      (function () {
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        /* ---------- scene windows (start, duration) ---------- */
+        const SCENES = [
+          { w: "w1", s: 0, d: 14 },
+          { w: "w2", s: 14, d: 14 },
+          { w: "w3", s: 28, d: 13 },
+          { w: "w4", s: 41, d: 13 },
+          { w: "w5", s: 54, d: 13 },
+          { w: "w6", s: 67, d: 14 },
+          { w: "w7", s: 81, d: 12 },
+          { w: "w8", s: 93, d: 7 },
+        ];
+        const end = (i) => SCENES[i].s + SCENES[i].d;
+
+        /* ---------- measure every stroke-once path ---------- */
+        document.querySelectorAll("[data-draw]").forEach((p) => {
+          const len = p.getTotalLength() * 1.05;
+          p.style.strokeDasharray = String(len);
+          p.style.strokeDashoffset = String(len);
+        });
+        const draw = (sel, at, dur) =>
+          tl.to(sel, { strokeDashoffset: 0, duration: dur, ease: "power2.out" }, at);
+
+        /* ---------- shared: waterfall arrival (rule: waterfall-entry) ----------
+           CSS holds opacity:0; tl.set reveals BINARY at t; tl.to whips y to rest. */
+        function cascade(sel, t0, gap, dur, dist) {
+          const els = gsap.utils.toArray(sel);
+          els.forEach((el, i) => {
+            const t = t0 + i * gap;
+            tl.set(el, { opacity: 1, y: dist }, t);
+            tl.to(el, { y: 0, duration: dur, ease: "power4.out" }, t);
+          });
+          return t0 + (els.length - 1) * gap + dur;
+        }
+
+        /* ---------- shared: caption lines ---------- */
+        function caption(scope, t0) {
+          const main = scope + " .main";
+          tl.fromTo(
+            main,
+            { y: 30, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.55, ease: "power3.out" },
+            t0,
+          );
+          const sec = gsap.utils.toArray(scope + " .sec, " + scope + " .note");
+          sec.forEach((el, i) => {
+            tl.fromTo(
+              el,
+              { y: 22, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+              t0 + 0.34 + i * 0.14,
+            );
+          });
+        }
+
+        /* ---------- shared: cut-the-curve seams (leftward, mirrored eases) ----------
+           exit: motion 0.30s power4.in, opacity dies in the first 0.18s
+           entry: motion 0.42s power4.out, opacity rides the same deceleration */
+        SCENES.forEach((sc, i) => {
+          const id = "#" + sc.w;
+          if (i > 0) {
+            tl.fromTo(
+              id,
+              { x: 180, opacity: 0 },
+              { x: 0, opacity: 1, duration: 0.42, ease: "power4.out" },
+              sc.s,
+            );
+          }
+          if (i < SCENES.length - 1) {
+            const e = end(i) - 0.3;
+            tl.to(id, { x: -180, duration: 0.3, ease: "power4.in" }, e);
+            tl.to(id, { opacity: 0, duration: 0.18, ease: "none" }, e);
+          }
+        });
+
+        /* the connector caveat exists only across scenes 2-3 (14s -> 41s).
+           The harness drives this from data-start during a render; the raw
+           file has no harness, so the timeline owns it as well. */
+        tl.set("#connector-tag", { opacity: 1 }, 14);
+        tl.set("#connector-tag", { opacity: 0 }, 41);
+
+        /* ---------- persistent progress rail ---------- */
+        SCENES.forEach((sc, i) => {
+          tl.fromTo(
+            "#rail-" + (i + 1),
+            { scaleX: 0 },
+            { scaleX: 1, duration: sc.d, ease: "none" },
+            sc.s,
+          );
+        });
+
+        /* ============================================================
+           SCENE 1 — company setup (0 → 14)
+           spring-pop-entrance · waterfall-entry · cursor-click-ripple
+           ============================================================ */
+        tl.fromTo(
+          "#s1-win",
+          { scale: 0.95, opacity: 0, y: 28 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.8, ease: "power3.out" },
+          0.05,
+        );
+        cascade(".step", 1.3, 0.4, 0.3, 44);
+        tl.set("#s1-btn", { opacity: 1 }, 3.1);
+        tl.fromTo(
+          "#s1-btn",
+          { y: 22 },
+          { y: 0, duration: 0.42, ease: "power3.out" },
+          3.1,
+        );
+
+        // cursor: fade in, glide to the button, click, ripple
+        tl.set("#cur1", { x: 1500, y: 640, opacity: 0, scale: 1 }, 0);
+        tl.to("#cur1", { opacity: 1, duration: 0.3, ease: "power1.out" }, 4.1);
+        tl.to("#cur1", { x: 279, y: 730, duration: 0.85, ease: "power3.out" }, 4.2);
+        tl.to("#cur1", { scale: 0.85, duration: 0.07, ease: "power2.in", yoyo: true, repeat: 1 }, 5.15);
+        tl.to("#s1-btn", { scale: 0.95, duration: 0.07, ease: "power2.in", yoyo: true, repeat: 1 }, 5.15);
+        tl.set("#rip1", { x: 285, y: 736, scale: 0, opacity: 0.55 }, 5.2);
+        tl.to("#rip1", { scale: 4, opacity: 0, duration: 0.7, ease: "power2.out" }, 5.2);
+        tl.to("#cur1", { opacity: 0, duration: 0.4, ease: "power1.in" }, 6.4);
+
+        cascade(".reg-row", 6.2, 0.5, 0.35, 34);
+        tl.fromTo(
+          "#s1-scope",
+          { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          8.1,
+        );
+        caption("#s1-cap", 9.0);
+
+        /* ============================================================
+           SCENE 2 — explicit task observation (14 → 28)
+           waterfall-entry · discrete-text-sequence · svg-path-draw
+           ============================================================ */
+        cascade(".tline", 14.3, 0.34, 0.25, 20);
+        tl.fromTo(
+          "#s2-pt",
+          { y: 22, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          14.75,
+        );
+        cascade(".field", 15.35, 0.45, 0.3, 26);
+        tl.set("#s2-conn", { opacity: 1 }, 18.8);
+        tl.fromTo(
+          "#s2-conn",
+          { y: 20 },
+          { y: 0, duration: 0.45, ease: "power3.out" },
+          18.8,
+        );
+        draw("#s2-wire", 19.1, 0.7);
+        tl.fromTo(
+          "#s2-note",
+          { y: 20, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          20.0,
+        );
+        caption("#s2-cap", 21.2);
+
+        /* ============================================================
+           SCENE 3 — manual shadow suggestion (28 → 41)
+           spring-pop-entrance · stat-bars-and-fills · cursor-click-ripple
+           · control-target-sync (driver below)
+           ============================================================ */
+        tl.fromTo(
+          "#s3-card",
+          { scale: 0.97, opacity: 0, y: 18 },
+          { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+          28.35,
+        );
+        // confidence = "limited": a deliberately short fill (stat-bars-and-fills)
+        tl.fromTo(
+          "#s3-conf",
+          { scaleX: 0 },
+          { scaleX: 0.34, duration: 1.0, ease: "power2.out" },
+          29.2,
+        );
+        tl.fromTo(
+          "#s3-btns",
+          { y: 22, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          30.4,
+        );
+
+        tl.set("#cur3", { x: 1500, y: 660, opacity: 0, scale: 1 }, 28);
+        tl.to("#cur3", { opacity: 1, duration: 0.3, ease: "power1.out" }, 31.2);
+        tl.to("#cur3", { x: 286, y: 608, duration: 0.8, ease: "power3.out" }, 31.3);
+        tl.to("#cur3", { scale: 0.85, duration: 0.07, ease: "power2.in", yoyo: true, repeat: 1 }, 32.0);
+        tl.to("#s3-accept", { scale: 0.95, duration: 0.07, ease: "power2.in", yoyo: true, repeat: 1 }, 32.0);
+        tl.set("#rip3", { x: 292, y: 614, scale: 0, opacity: 0.55 }, 32.05);
+        tl.to("#rip3", { scale: 4, opacity: 0, duration: 0.7, ease: "power2.out" }, 32.05);
+
+        tl.set("#s3-accepted", { opacity: 1 }, 32.6);
+        tl.fromTo(
+          "#s3-accepted",
+          { y: 20 },
+          { y: 0, duration: 0.5, ease: "power3.out" },
+          32.6,
+        );
+
+        tl.fromTo(
+          "#s3-picker",
+          { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.55, ease: "power3.out" },
+          34.0,
+        );
+        cascade(".picker .opt", 34.6, 0.3, 0.3, 20);
+
+        // second, deliberately separate manual selection
+        tl.to("#cur3", { x: 1487, y: 451, duration: 0.7, ease: "power3.out" }, 36.0);
+        tl.to("#cur3", { scale: 0.85, duration: 0.07, ease: "power2.in", yoyo: true, repeat: 1 }, 36.7);
+        tl.to("#s3-o2", { scale: 0.97, duration: 0.07, ease: "power2.in", yoyo: true, repeat: 1 }, 36.7);
+        tl.set("#rip3", { x: 1495, y: 457, scale: 0, opacity: 0.55 }, 36.75);
+        tl.to("#rip3", { scale: 3.5, opacity: 0, duration: 0.65, ease: "power2.out" }, 36.75);
+        tl.to(
+          "#s3-o2",
+          {
+            borderColor: "rgba(240,169,59,0.6)",
+            backgroundColor: "rgba(240,169,59,0.12)",
+            color: "#f0a93b",
+            duration: 0.3,
+            ease: "power2.out",
+          },
+          36.7,
+        );
+        tl.to("#cur3", { opacity: 0, duration: 0.4, ease: "power1.in" }, 37.6);
+
+        caption("#s3-cap", 38.6);
+
+        // control-target-sync — one state array drives BOTH readouts.
+        // Control = the model picker; bound targets = its own readout and the
+        // suggestion card's "Current selection". Both change on the same threshold.
+        const S3_STEPS = [
+          { t: 0.0, text: "fixture/premium" },
+          { t: 8.7, text: "fixture/standard" },
+        ];
+        const s3drv = { t: 0 };
+        const s3sel = document.getElementById("s3-selval");
+        const s3cur = document.getElementById("s3-cur");
+        tl.to(
+          s3drv,
+          {
+            t: 13,
+            duration: 13,
+            ease: "none",
+            onUpdate: function () {
+              let s = S3_STEPS[0];
+              for (let i = S3_STEPS.length - 1; i >= 0; i--) {
+                if (s3drv.t >= S3_STEPS[i].t) {
+                  s = S3_STEPS[i];
+                  break;
+                }
+              }
+              if (s3sel.textContent !== s.text) s3sel.textContent = s.text;
+              if (s3cur.textContent !== s.text) s3cur.textContent = s.text;
+            },
+          },
+          28,
+        );
+
+        /* ============================================================
+           SCENE 4 — linked actual-model and result records (41 → 54)
+           waterfall-entry · svg-path-draw
+           ============================================================ */
+        cascade(".node", 41.3, 0.9, 0.4, 30);
+        draw("#s4-p1", 41.8, 0.45);
+        draw("#s4-p2", 42.7, 0.45);
+        draw("#s4-p3", 43.6, 0.45);
+
+        tl.fromTo(
+          "#s4-d1",
+          { y: 26, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          45.3,
+        );
+        tl.fromTo(
+          "#s4-d2",
+          { y: 26, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          45.8,
+        );
+        tl.fromTo(
+          "#s4-uv",
+          { y: 22, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          46.8,
+        );
+        tl.fromTo(
+          "#s4-other",
+          { y: 22, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          47.7,
+        );
+        caption("#s4-cap", 48.8);
+
+        /* ============================================================
+           SCENE 5 — retain everyone's evidence (54 → 67)
+           waterfall-entry · counting-dynamic-scale
+           ============================================================ */
+        cascade(".tbl tr.r", 54.3, 0.35, 0.3, 24);
+
+        function countUp(scope, target, at) {
+          const wrap = document.querySelector(scope);
+          const el = wrap.querySelector(".n");
+          const o = { v: 0 };
+          tl.set(wrap, { opacity: 1 }, at);
+          tl.fromTo(
+            el,
+            { scale: 0.55 },
+            { scale: 1, duration: 1.1, ease: "power3.out" },
+            at,
+          );
+          tl.to(
+            o,
+            {
+              v: target,
+              duration: 1.1,
+              ease: "power3.out",
+              onUpdate: function () {
+                el.textContent = String(Math.round(o.v));
+              },
+            },
+            at,
+          );
+        }
+        // one chord, not an arpeggio — all four land together
+        countUp("#s5-c1", 3, 57.3);
+        countUp("#s5-c2", 1, 57.3);
+        countUp("#s5-c3", 1, 57.3);
+        countUp("#s5-c4", 1, 57.3);
+
+        tl.fromTo(
+          "#s5-role",
+          { y: 22, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          59.3,
+        );
+        caption("#s5-cap", 60.8);
+
+        /* ============================================================
+           SCENE 6 — experimental learning & category review (67 → 81)
+           waterfall-entry · css-marker-patterns (highlight sweep)
+           ============================================================ */
+        tl.fromTo(
+          "#s6-plan",
+          { y: 26, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.55, ease: "power3.out" },
+          67.25,
+        );
+        cascade(".freeze .chipx", 68.1, 0.3, 0.3, 20);
+        tl.set("#s6-params", { opacity: 1 }, 69.0);
+        tl.fromTo(
+          "#s6-params",
+          { y: 24 },
+          { y: 0, duration: 0.5, ease: "power3.out" },
+          69.0,
+        );
+        tl.fromTo(
+          "#s6-review",
+          { y: 22, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" },
+          69.7,
+        );
+        cascade(".cat", 70.5, 0.5, 0.35, 28);
+        caption("#s6-cap", 73.4);
+        tl.fromTo(
+          "#s6-hl",
+          { scaleX: 0 },
+          { scaleX: 1, duration: 0.5, ease: "power2.out" },
+          74.4,
+        );
+
+        /* ============================================================
+           SCENE 7 — pause at independent readiness (81 → 93)
+           svg-path-draw (gate outline) · waterfall-entry · then HOLD STILL
+           ============================================================ */
+        draw("#s7-gate-path", 81.5, 0.9);
+        tl.set("#s7-paused", { opacity: 1 }, 82.6);
+        tl.fromTo(
+          "#s7-paused",
+          { x: -22 },
+          { x: 0, duration: 0.5, ease: "power3.out" },
+          82.6,
+        );
+        const gateItems = gsap.utils.toArray(".gate li");
+        gateItems.forEach((el, i) => {
+          const t = 83.3 + i * 0.35;
+          tl.set(el, { opacity: 1, x: -18 }, t);
+          tl.to(el, { x: 0, duration: 0.3, ease: "power3.out" }, t);
+        });
+        tl.set("#s7-next", { opacity: 1 }, 85.4);
+        tl.fromTo(
+          "#s7-next",
+          { y: 24 },
+          { y: 0, duration: 0.5, ease: "power3.out" },
+          85.4,
+        );
+        tl.set("#s7-req", { opacity: 1 }, 86.4);
+        tl.fromTo(
+          "#s7-req",
+          { y: 24 },
+          { y: 0, duration: 0.5, ease: "power3.out" },
+          86.4,
+        );
+        caption("#s7-cap", 87.4);
+        // …nothing else. The frame settles at ~88.0 and holds perfectly still
+        // until the seam at 92.7 — the stillness is the point of the gate.
+
+        /* ============================================================
+           SCENE 8 — final frame (93 → 100)
+           waterfall-entry · svg-path-draw · spring-pop-entrance
+           ============================================================ */
+        tl.set("#s8-head", { opacity: 1 }, 93.1);
+        tl.fromTo(
+          "#s8-head",
+          { y: 26 },
+          { y: 0, duration: 0.5, ease: "power3.out" },
+          93.1,
+        );
+        cascade(".stg", 93.45, 0.15, 0.3, 40);
+        for (let i = 1; i <= 6; i++) draw("#s8-t" + i, 94.45 + (i - 1) * 0.15, 0.3);
+        tl.set("#s8-pause", { opacity: 1 }, 95.7);
+        tl.fromTo(
+          "#s8-pause",
+          { y: 22 },
+          { y: 0, duration: 0.5, ease: "power3.out" },
+          95.7,
+        );
+        ["#s8-f1", "#s8-f2", "#s8-f3"].forEach((sel, i) => {
+          tl.set(sel, { opacity: 1 }, 96.3 + i * 0.3);
+          tl.fromTo(
+            sel,
+            { y: 20 },
+            { y: 0, duration: 0.4, ease: "power3.out" },
+            96.3 + i * 0.3,
+          );
+        });
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+
+    <!-- ===================== player chrome (not part of the composition) ===================== -->
+    <div class="hf-bar" id="hf-bar">
+      <div class="hf-row">
+        <button class="hf-btn" id="hf-play" type="button" aria-label="Play or pause">
+          <svg viewBox="0 0 16 16" aria-hidden="true" data-icon><path d="M4 2l10 6-10 6z"/></svg>
+          <span data-label>Play</span>
+        </button>
+        <button class="hf-btn" id="hf-replay" type="button" aria-label="Replay from the start">
+          Replay
+        </button>
+        <span class="hf-time" id="hf-time">0:00 / 1:40</span>
+        <div class="hf-seek" id="hf-seek" role="slider" tabindex="0"
+             aria-label="Seek through the walkthrough"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="hf-track"></div>
+          <div class="hf-fill" id="hf-fill"></div>
+          <div class="hf-head" id="hf-head"></div>
+        </div>
+      </div>
+      <div class="hf-scenes" id="hf-scenes">
+        <span class="hf-hint">Space play/pause &middot; &larr;/&rarr; 5s &middot; R replay &middot; 1&ndash;8 scenes</span>
+      </div>
+    </div>
+    <script>
+
+      (function () {
+        var tl = window.__timelines && window.__timelines["main"];
+        if (!tl) {
+          var err = document.createElement("div");
+          err.className = "hf-error";
+          err.textContent =
+            "The composition timeline did not load. Keep player.html beside index.html and assets/.";
+          document.body.appendChild(err);
+          return;
+        }
+
+        var SCENES = [{"n":"01","label":"Company setup","start":0},{"n":"02","label":"Task observation","start":14},{"n":"03","label":"Shadow suggestion","start":28},{"n":"04","label":"Linked records","start":41},{"n":"05","label":"Evidence retained","start":54},{"n":"06","label":"Category review","start":67},{"n":"07","label":"PAUSED HERE","start":81},{"n":"08","label":"Final frame","start":93}];
+        var DURATION = tl.duration();
+        var bar = document.getElementById("hf-bar");
+        var playBtn = document.getElementById("hf-play");
+        var playLabel = playBtn.querySelector("[data-label]");
+        var playIcon = playBtn.querySelector("[data-icon]");
+        var replayBtn = document.getElementById("hf-replay");
+        var timeEl = document.getElementById("hf-time");
+        var seek = document.getElementById("hf-seek");
+        var fill = document.getElementById("hf-fill");
+        var head = document.getElementById("hf-head");
+        var scenesEl = document.getElementById("hf-scenes");
+
+        /* ---------- keep the 1920x1080 stage fitted above the control bar ---------- */
+        function fit() {
+          var w = window.innerWidth;
+          var h = window.innerHeight - bar.offsetHeight;
+          var k = Math.min(w / 1920, h / 1080);
+          var dx = (w - 1920 * k) / 2;
+          var dy = (h - 1080 * k) / 2;
+          document.getElementById("root").style.transform =
+            "translate(" + dx + "px," + dy + "px) scale(" + k + ")";
+        }
+
+        /* ---------- readout ---------- */
+        function clock(sec) {
+          var s = Math.max(0, Math.floor(sec));
+          return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+        }
+
+        function activeScene(t) {
+          var idx = 0;
+          for (var i = 0; i < SCENES.length; i++) {
+            if (t >= SCENES[i].start - 0.001) idx = i;
+          }
+          return idx;
+        }
+
+        var chips = SCENES.map(function (sc) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "hf-chip";
+          b.innerHTML = "<b>" + sc.n + "</b>" + sc.label;
+          b.title = "Jump to " + sc.label + " (" + sc.start + "s)";
+          b.addEventListener("click", function () {
+            goto(sc.start);
+          });
+          scenesEl.insertBefore(b, scenesEl.querySelector(".hf-hint"));
+          return b;
+        });
+
+        /* scene-boundary ticks on the seek bar */
+        SCENES.forEach(function (sc) {
+          if (!sc.start) return;
+          var t = document.createElement("i");
+          t.className = "hf-tick";
+          t.style.left = ((sc.start / DURATION) * 100).toFixed(3) + "%";
+          seek.appendChild(t);
+        });
+
+        function goto(sec) {
+          var wasPlaying = !tl.paused();
+          tl.time(sec);
+          if (wasPlaying) tl.play();
+          sync();
+        }
+
+        function sync() {
+          var t = tl.time();
+          var p = DURATION ? t / DURATION : 0;
+          fill.style.width = (p * 100).toFixed(3) + "%";
+          head.style.left = (p * 100).toFixed(3) + "%";
+          timeEl.textContent = clock(t) + " / " + clock(DURATION);
+          seek.setAttribute("aria-valuenow", String(Math.round(p * 100)));
+          seek.setAttribute("aria-valuetext", clock(t));
+          var playing = !tl.paused() && t < DURATION;
+          playLabel.textContent = playing ? "Pause" : "Play";
+          playIcon.innerHTML = playing
+            ? '<path d="M3 2h4v12H3zM9 2h4v12H9z"/>'
+            : '<path d="M4 2l10 6-10 6z"/>';
+          playBtn.setAttribute("aria-pressed", playing ? "true" : "false");
+          var active = activeScene(t);
+          chips.forEach(function (c, i) {
+            c.setAttribute("aria-current", i === active ? "true" : "false");
+          });
+        }
+
+        /* ---------- play / pause / replay ---------- */
+        function toggle() {
+          if (tl.progress() >= 1) tl.time(0);
+          if (tl.paused()) tl.play();
+          else tl.pause();
+          sync();
+        }
+        playBtn.addEventListener("click", toggle);
+        replayBtn.addEventListener("click", function () {
+          tl.time(0);
+          tl.play();
+          sync();
+        });
+
+        /* ---------- seek: click + drag ---------- */
+        function seekTo(clientX) {
+          var r = seek.getBoundingClientRect();
+          var p = r.width ? (clientX - r.left) / r.width : 0;
+          p = Math.min(1, Math.max(0, p));
+          tl.time(p * DURATION);
+          sync();
+        }
+        var dragging = false;
+        seek.addEventListener("pointerdown", function (e) {
+          dragging = true;
+          seek.setPointerCapture(e.pointerId);
+          seekTo(e.clientX);
+        });
+        seek.addEventListener("pointermove", function (e) {
+          if (dragging) seekTo(e.clientX);
+        });
+        seek.addEventListener("pointerup", function (e) {
+          dragging = false;
+          try {
+            seek.releasePointerCapture(e.pointerId);
+          } catch (err) {}
+        });
+        seek.addEventListener("pointercancel", function () {
+          dragging = false;
+        });
+        seek.addEventListener("keydown", function (e) {
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            goto(Math.min(DURATION, tl.time() + 5));
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            goto(Math.max(0, tl.time() - 5));
+          }
+        });
+
+        /* ---------- keyboard ---------- */
+        document.addEventListener("keydown", function (e) {
+          if (e.metaKey || e.ctrlKey || e.altKey) return;
+          if (e.key === " " || e.key === "k") {
+            e.preventDefault();
+            toggle();
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            goto(Math.min(DURATION, tl.time() + 5));
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            goto(Math.max(0, tl.time() - 5));
+          } else if (e.key === "r" || e.key === "R") {
+            e.preventDefault();
+            tl.time(0);
+            tl.play();
+            sync();
+          } else if (/^[1-8]$/.test(e.key)) {
+            e.preventDefault();
+            goto(SCENES[Number(e.key) - 1].start);
+          }
+        });
+
+        /* ---------- timeline callbacks + layout ---------- */
+        tl.eventCallback("onUpdate", sync);
+        tl.eventCallback("onPlay", sync);
+        tl.eventCallback("onPause", sync);
+        tl.eventCallback("onComplete", sync);
+
+        window.addEventListener("resize", fit);
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(bar);
+
+        fit();
+        sync();
+
+        /* Deep links for review:
+             player.html#t=63      starts paused at 63s
+             player.html#play=1    starts playing immediately          */
+        var m = /t=([0-9.]+)/.exec(window.location.hash || "");
+        if (m) {
+          tl.time(Math.min(DURATION, parseFloat(m[1])));
+          sync();
+        }
+        if (/play=1/.test(window.location.hash || "")) tl.play();
+      })();
+
+    </script>
+  </body>
+</html>
