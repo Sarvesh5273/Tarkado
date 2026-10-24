@@ -1015,7 +1015,15 @@ def stage_recover(*references):
 
 # ---------------------------------------------------------------- main
 
-STAGES = {"setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
+def stage_relearn(label="relearn"):
+    """The next learning review: the routed outcomes (settled cost, CI results) enter the evidence."""
+    if label not in load_state().get("reviews", {}):
+        stage_review(label)
+    if not load_state()["reviews"][label].get("published"):
+        stage_publish(label)
+
+
+STAGES = {"relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in STAGES:

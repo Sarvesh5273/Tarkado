@@ -1175,3 +1175,21 @@ existing gateway rather than becoming another gateway.
 - [ ] Keep an advanced method only if it improves a measured result.
 
 **Done when:** every “smart” feature beats a simple baseline or is removed.
+
+## Post-demo follow-ups — recorded 2026-10-24
+
+- [ ] **Revision-0 settlement bug.** When a developer ends a bound task whose gateway
+  journal is empty, owner-close finalizes at `delivery_revision 0`; selection replay
+  rejects revision 0 and the close rolls back with a 400 ("Selection accounting differs
+  from its historical delivery revision"), surfaced by the plugin as "RPC call failed".
+  Workaround: the gateway closes first. Fix with a regression test.
+- [ ] **Unknown attempts after a provider 4xx.** A provider rejection reached only the
+  failure deployment hook; decide whether a provider-returned 4xx with no usage can be
+  settled as a known zero-cost failure (with evidence) instead of staying unknown.
+- [ ] **Non-OpenAI provider bindings.** The gateway accepts only the OpenAI transport at
+  one reviewed endpoint. Azure AI Foundry's OpenAI-compatible `/openai/v1/` endpoint
+  should fit as a v2 `provider_api_base`; verify against a real resource before claiming it.
+- [ ] **Teammate routing proposal** (router/bandit/dataset): assess after the demo.
+- [ ] **Packaged local install** of the demo stack (company app, LiteLLM, OpenCode plugin)
+  for a developer laptop.
+
