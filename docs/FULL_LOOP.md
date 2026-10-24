@@ -47,3 +47,13 @@ startup schema v2). Provider keys stay in LiteLLM's configuration and environmen
 Tarkado files. A different OpenAI-compatible endpoint (for example Azure AI Foundry's
 `https://<resource>.services.ai.azure.com/openai/v1/` with deployment names as provider
 models) should only need configuration, but is unverified until run against a real resource.
+
+## Recorded runs (2026-10-24)
+
+- **Run 1** (retained, `local/full-loop-run1/`): a gateway defect made the provider reject
+  routed task R1b; the pilot paused, the owner rolled it back, and the next review correctly
+  refused live re-approval of luna for documentation. See DECISIONS.md.
+- **Run 2** (fresh DEMO company, fixed code, about 8 minutes end to end): 5 shadow tasks →
+  review → publish → MFA approval and activation → pairing → routed R1 (junior) and R2
+  (senior) on luna through OpenCode → LiteLLM → provider, both CI-passing, settled at
+  $0.0019612 and $0.0021550 with zero unknown attempts → relearn review published.
