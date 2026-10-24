@@ -49,6 +49,34 @@ provider exposed defects that controlled fixtures could not; each fix has tests.
 Deferred (see TASKS.md, "Post-demo follow-ups"): the revision-0 settlement bug, teammate
 routing ideas, and a non-OpenAI provider binding.
 
+### Laptop demo (owner choice 2026-10-25: stack stays hosted, laptops run only OpenCode)
+
+Driving the real OpenCode 2.0.21 TUI (not the RPC driver) found defects the fixtures could not:
+
+- **Reactive proxies.** The TUI's route/location are reactive store proxies; `structuredClone`
+  refused them (DataCloneError), so every guided start was refused. Snapshots and every
+  `location` handed to RPC are now plain JSON copies.
+- **Session status shape.** The TUI's `session.status()` returns a bare string (`"idle"`), not
+  `{ type }`. The end guard only refused `type === "running"`, so it would have allowed ending
+  a running task. End now requires an explicit idle state in either shape; anything else refuses.
+- **Company call timeout 5 s → 30 s.** Conditional select re-verifies the live scope
+  (`live_guard`, ~2 s each on the DEMO host, several times per select); total time grows with
+  company history (2.6 s, 4.4 s, 9.7 s for successive tasks). A client timeout does not stop
+  the server, so the 5 s limit stranded a selection without claim or session (cancelled at $0;
+  the lifetime slot stays consumed). Making `live_guard` cheaper is deferred; it is O(history).
+- **Provider lock.** Without it OpenCode 2.0.21 also loads its built-in free hosted models
+  and defaults to one, so a prompt typed outside a bound task silently left the company
+  (seen once on a synthetic demo file). The DEMO config now denies every provider except
+  `company` (`experimental.policies`, `provider.use`).
+- **Windows credential file.** Windows has no POSIX owner/mode bits, so the plugin accepts a
+  drive-absolute path there and keeps the regular-file/no-link/size/swap checks, but the
+  file's privacy rests on the user profile ACL. Weaker than POSIX; DEMO limitation.
+- **Binding is in memory.** Closing OpenCode before `/tarkado-delivery-end` loses the
+  binding; the reopened session shows "no bound task". Recovery is gateway close + browser
+  end-interrupted (a gap, so the next pilot needs a rescope). Keep OpenCode open until end.
+- **No laptop CI result.** `ci.key` stays on the stack host, so laptop tasks report the model
+  only; the result stays unknown rather than self-attested.
+
 ## Public GitHub publication — owner authorized 2026-10-05
 
 After discussing open-source versus public source, the owner explicitly requested

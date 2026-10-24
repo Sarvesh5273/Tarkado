@@ -58,6 +58,17 @@ test("delivery end refuses unknown or running sessions instead of releasing thei
   await actions.end()
   assert.equal(calls.length, 0)
   assert.equal(toasts.length, 1)
+  // OpenCode 2.0.21's TUI returns bare strings; anything but explicit idle refuses.
+  for (const value of ["busy", "running", "retry", undefined, {}]) {
+    context.data.session.status = () => value
+    await actions.end()
+  }
+  assert.equal(calls.length, 0)
+  assert.equal(toasts.length, 6)
+  context.data.session.status = () => "idle"
+  await actions.end()
+  assert.deepEqual(calls[0], { method: "end", input: { sessionID: "ses_unrelated_active" } })
+  assert.equal(toasts.length, 6)
 })
 
 test("task panel keeps unknown obligations and complete negative budget visible", () => {

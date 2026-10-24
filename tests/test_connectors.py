@@ -371,3 +371,14 @@ class ConnectorJavaScriptTests(unittest.TestCase):
         result = subprocess.run(["node", "--test", *map(str, paths)], cwd=root, text=True, capture_output=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("fail 0", result.stdout)
+
+
+class ExactDirectoryTests(unittest.TestCase):
+    def test_posix_and_windows_drive_absolute_only(self):
+        accepted = ["/", "/Users/dev/demo", "C:\\Users\\dev\\demo", "d:\\work"]
+        refused = ["", "relative", "/Users/dev/demo/", "C:\\Users\\dev\\demo\\", "C:/Users/dev/demo", "C:\\", "C:demo",
+                   "\\\\server\\share\\demo", "\\\\?\\C:\\demo", "CC:\\demo", "C:\\Users\\a:b", "C:\\Users\\a\nb"]
+        for directory in accepted:
+            self.assertTrue(connectors.exact_directory(directory), directory)
+        for directory in refused:
+            self.assertFalse(connectors.exact_directory(directory), directory)

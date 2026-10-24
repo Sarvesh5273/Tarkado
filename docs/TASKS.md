@@ -1186,6 +1186,13 @@ existing gateway rather than becoming another gateway.
 - [ ] **Unknown attempts after a provider 4xx.** A provider rejection reached only the
   failure deployment hook; decide whether a provider-returned 4xx with no usage can be
   settled as a known zero-cost failure (with evidence) instead of staying unknown.
+- [ ] **Selection latency grows with history.** `live_guard` re-scans all company evidence
+  (mostly `ensure_safe` privacy checks over task ledgers), ~2 s per call on the DEMO host and
+  called several times per conditional select (9.7 s total by the eighth task). The plugin
+  timeout was raised to 30 s as a stopgap; cache or narrow the re-verification.
+- [ ] **Delivery binding survives an OpenCode restart.** The plugin keeps adapters in memory,
+  so a restarted host cannot end its own bound task (recovery creates a gap). Rebuild the
+  adapter from company state for an exact, still-open binding.
 - [ ] **Non-OpenAI provider bindings.** The gateway accepts only the OpenAI transport at
   one reviewed endpoint. Azure AI Foundry's OpenAI-compatible `/openai/v1/` endpoint
   should fit as a v2 `provider_api_base`; verify against a real resource before claiming it.

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { actions as feedbackActions } from "./actions.mjs"
+import { actions as feedbackActions, plainLocation } from "./actions.mjs"
 
 export function deliveryLines(state) {
   const task = state?.task
@@ -27,7 +27,9 @@ export function deliveryLines(state) {
 export function deliveryActions({ rpc, context, status, setStatus }) {
   const feedback = feedbackActions({ rpc, context, status, setStatus })
   let busy = false
-  const snapshot = () => structuredClone({ route: context.ui.router.current(), location: context.location })
+  // Plain JSON copy: in the real OpenCode TUI the route/location are reactive store
+  // proxies, which structuredClone refuses (DataCloneError), refusing every start.
+  const snapshot = () => JSON.parse(JSON.stringify({ route: context.ui.router.current(), location: context.location }))
   const sameContext = original => {
     const current = snapshot()
     if (JSON.stringify(current) !== JSON.stringify(original)) throw new Error("Route/location changed; review a fresh explicit task.")
@@ -43,7 +45,7 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
     refresh: feedback.refresh,
     accept: feedback.accept, reject: feedback.reject, reportModel: feedback.reportModel, result: feedback.result, browser: feedback.browser,
     connect: run(async () => {
-      const configuration = await rpc.connect({}, { location: context.location })
+      const configuration = await rpc.connect({}, { location: plainLocation(context) })
       context.ui.toast.show({ title: "Tarkado delivery", message: `${configuration.scopes?.length ?? 0} paired scope records. This is not permission to execute; independent verification is rechecked.`, variant: "info" })
       await feedback.refresh()
     }),
@@ -103,8 +105,11 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
       if (original.route.type !== "session") throw new Error("Open the specific delivery task first.")
       const id = original.route.sessionID
       const checkIdle = () => {
+        // OpenCode 2.0.21's TUI returns a bare string ("idle"); older shapes used { type }.
+        // Only an explicitly idle session may end; unknown or any other state refuses.
         const execution = context.data.session.status(id)
-        if (execution === undefined || execution?.type === "running") throw new Error("Task is not known idle.")
+        const kind = typeof execution === "string" ? execution : execution?.type
+        if (kind !== "idle") throw new Error("Task is not known idle.")
       }
       checkIdle()
       if (!await context.ui.dialog.confirm({ title: "End this explicit task only", message: "Close the task without claiming success or refunding unknown costs. Outstanding settlement survives close/revocation.", label: { confirm: "End task", cancel: "Cancel" } })) return

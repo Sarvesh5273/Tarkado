@@ -15,19 +15,26 @@ export function origin(value) {
   return url.origin
 }
 
-export async function credentialFile(path) {
-  if (typeof path !== "string" || !path.startsWith("/")) throw new Error("Configure an explicit private connector credential file.")
+// Windows has no POSIX owner/mode bits (Node reports 0o666/0o444 and no uid), so there the
+// file must still be a small regular non-link file, but its privacy rests on the user
+// profile's NTFS ACL (the DEMO launcher writes it inside the user's own checkout). That is
+// weaker than the POSIX owner-only check and is a documented DEMO limitation.
+export async function credentialFile(path, platform = process.platform) {
+  const windows = platform === "win32"
+  const { posix, win32 } = await import("node:path")
+  if (typeof path !== "string" || !(windows ? win32.isAbsolute(path) : posix.isAbsolute(path))) throw new Error("Configure an explicit private connector credential file.")
+  const shared = stat => !windows && ((stat.mode & 0o077) || stat.uid !== process.getuid())
   const info = await lstat(path)
-  if (!info.isFile() || (info.mode & 0o077) || info.uid !== process.getuid() || info.size > 4096) {
+  if (!info.isFile() || shared(info) || info.size > 4096) {
     throw new Error("Connector credential must be a small owner-only regular file; existing permissions are not changed.")
   }
   const file = await import("node:fs/promises")
   const fs = await import("node:fs")
-  const handle = await file.open(path, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW)
+  const handle = await file.open(path, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0))
   let data
   try {
     const actual = await handle.stat()
-    if (actual.ino !== info.ino || actual.dev !== info.dev || (actual.mode & 0o077) || actual.size > 4096) throw new Error("Credential file changed while opening.")
+    if (actual.ino !== info.ino || actual.dev !== info.dev || shared(actual) || actual.size > 4096) throw new Error("Credential file changed while opening.")
     try { data = JSON.parse(await handle.readFile("utf8")) }
     catch { throw new Error("Invalid private connector JSON. No credential content was printed.") }
   } finally { await handle.close() }
@@ -46,7 +53,10 @@ export class CompanyClient {
   async call(method, value) {
     if (!["status", "start", "task", "observation", "feedback", "conditional-select", "conditional-claim", "conditional-settle", "delivery-preflight", "delivery-bind", "delivery-options", "delivery-task", "tool-status"].includes(method)) throw new Error("Unsupported connector method.")
     const response = await this.transport(`${this.configuration.origin}/api/connectors/v1/${method}/`, {
-      method: "POST", redirect: "error", credentials: "omit", signal: AbortSignal.timeout(5000),
+      // 30s, not 5s: conditional select/claim re-verify the live scope several times and that
+      // grows with company history (~10s on the DEMO host). A client timeout does not stop the
+      // server, so a short one strands a spent selection without its claim/session.
+      method: "POST", redirect: "error", credentials: "omit", signal: AbortSignal.timeout(30000),
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.configuration.credential}` },
       body: JSON.stringify(value),
     })

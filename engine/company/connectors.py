@@ -1,6 +1,7 @@
 """Scoped delegated observation, never provider credentials, model calls, or pilot authority."""
 
 import hashlib
+import re
 import secrets
 import uuid
 from datetime import timedelta
@@ -33,6 +34,18 @@ def uuid_value(value):
         raise ValidationError("Use the connector's canonical UUID reference.") from None
 
 
+# A Windows drive-absolute path as OpenCode reports it (C:\Users\dev\repo): no
+# trailing separator, no forward slashes, no device/UNC/relative forms.
+_WINDOWS_DIRECTORY = re.compile(r"[A-Za-z]:\\(?:[^\\/:*?\"<>|\x00-\x1f]+\\)*[^\\/:*?\"<>|\x00-\x1f]+")
+
+
+def exact_directory(directory):
+    """An exact absolute OpenCode working directory: POSIX, or Windows drive-absolute."""
+    if directory.startswith("/"):
+        return not directory.endswith("/") or directory == "/"
+    return _WINDOWS_DIRECTORY.fullmatch(directory) is not None
+
+
 def issue(request, name, repository, directory, expires_at, expected_revision, password, source_kind="team"):
     _fresh_password(request, password)
     with transaction.atomic():
@@ -44,7 +57,7 @@ def issue(request, name, repository, directory, expires_at, expected_revision, p
         if not set(("observation_kind", "request_kind", "coverage_status", "actual_model")).issubset(member.company.collection_fields):
             raise ValidationError("An administrator must explicitly approve connector observation fields in Policy & collection first.")
         name, directory = text(name, "connector_name"), text(directory, "directory")
-        if len(name) > 128 or not directory.startswith("/") or directory.endswith("/") and directory != "/":
+        if len(name) > 128 or not exact_directory(directory):
             raise ValidationError("Use a short connector name and an exact absolute OpenCode working directory without a trailing slash.")
         choice(source_kind, "source_kind", ("synthetic", "team"))
         now = timezone.now()

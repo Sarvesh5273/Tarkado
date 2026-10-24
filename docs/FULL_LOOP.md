@@ -40,6 +40,32 @@ Recovery: `recover <task_ref>` (gateway close, then end-interrupted, creates a g
 `close_refused <id> "<why>"` (gateway refused before any paid attempt), `rescope <label> <pilot_id>`.
 Never re-submit a lost start; never reuse a task label.
 
+## Laptop demo
+
+The stack stays on the host; a Mac or Windows laptop runs only a pinned, isolated OpenCode
+2.0.21 with the Tarkado delivery plugin (its own OpenCode config, providers and MCP servers
+are not used). Needs Node.js 20+ and git, and the host's company/gateway URLs must be
+reachable from the laptop.
+
+On the host (the pilot, gateway and connectors expire within 24 h, so do this the same day):
+
+1. `rescope <label> <new pilot id>` if the pilot is stale or expired, and renew the gateway.
+2. `laptop <persona> <exact absolute repo path on the laptop> <bundle>` writes the private
+   bundle `local/full-loop/laptop/<bundle>.json`. Send it privately; never commit it.
+
+On the laptop, from a checkout of this branch:
+
+1. `node demo/laptop/start-demo.mjs check <bundle.json>` installs OpenCode once, creates the
+   DEMO repository at the bundle path, checks both URLs, and checks that this OpenCode's tool
+   definitions match the reviewed host (otherwise the gateway would refuse every request).
+2. `node demo/laptop/start-demo.mjs start <bundle.json>`, then in OpenCode:
+   `/tarkado-delivery-start` → answer the dialogs → `/tarkado-delivery-accept` → type the
+   task → wait until it is idle → `/tarkado-delivery-end`. **Keep OpenCode open until end.**
+3. On the host: `settle <task_ref>` (gateway close, known cost).
+
+The model is reported from the laptop; the result stays unknown there (the CI key stays on
+the host). Expect select to take about 10 s.
+
 ## Provider
 
 The gateway calls one reviewed OpenAI-transport endpoint (`provider_api_base`, gateway

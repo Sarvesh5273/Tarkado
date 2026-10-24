@@ -235,7 +235,12 @@ def oc_config(base_url, plugin=None):
                                         "package": "@opencode/ai/providers/openai-compatible",
                                         "settings": {"baseURL": base_url}, "models": models}},
               "permissions": [{"action": tool, "resource": "*", "effect": "allow"} for tool in ALLOWED_TOOLS]
-              + [{"action": tool, "resource": "*", "effect": "deny"} for tool in DENIED_TOOLS]}
+              + [{"action": tool, "resource": "*", "effect": "deny"} for tool in DENIED_TOOLS],
+              # Only the company gateway. Without this OpenCode 2.0.21 also loads its built-in
+              # free hosted models and defaults to one, so a prompt typed outside a bound task
+              # silently leaves the company (seen on the laptop TUI run). Last match wins.
+              "experimental": {"policies": [{"action": "provider.use", "resource": "*", "effect": "deny"},
+                                            {"action": "provider.use", "resource": "company", "effect": "allow"}]}}
     if plugin:
         config["plugins"] = [{"package": str(ROOT / "integrations" / "opencode" / "delivery"), "options": plugin}]
     return config
@@ -752,6 +757,49 @@ def pair(name, state):
     log(f"{name} paired an OpenCode connector for {REPOSITORY} (credential stored privately, 0600).")
 
 
+def stage_laptop(name, directory, bundle):
+    """Kit for a developer laptop running only OpenCode + the Tarkado plugin against this
+    stack: pair one more connector for `name` scoped to the laptop's exact repository
+    directory, and write a private bundle (credentials included, DEMO only) that
+    demo/laptop/start-demo.mjs consumes. Never committed; download it, keep it private."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", bundle):
+        raise SystemExit("Bundle name: letters, digits, '-' or '_' only.")
+    state = load_state()
+    page = secure_submit(name, "/connectors/", {"name": f"{name}-laptop-{bundle}", "repository_ref": REPOSITORY, "directory": directory,
+                                                "expires_at": (now() + timedelta(hours=23)).isoformat(), "source_kind": "team",
+                                                "confirmation": "on"}, "directory")
+    value = re.search(r'<pre id="connector-credential">([A-Za-z0-9_-]{43})</pre>', page.html)
+    if not value:
+        raise RuntimeError(f"Laptop pairing for {name} was refused: " + form_errors(page.html))
+    person = read_json(PRIVATE / "personas.json")[name]
+    config = oc_config(GATEWAY + "/v1")
+    (STATE / "laptop").mkdir(mode=0o700, exist_ok=True)
+    write_private(STATE / "laptop" / f"{bundle}.json", {
+        "schema": "tarkado-demo-laptop-v1", "persona": name, "directory": directory, "opencode_version": "2.0.21",
+        "company_origin": COMPANY, "gateway_key": person["gateway_key"],
+        "connector": {"origin": COMPANY, "credential": value.group(1)},
+        "plugin_options": {"privateDeveloperService": True, "gatewayRef": state["gateway"]["reference"], "providerID": "company",
+                           "gatewayOrigin": GATEWAY + "/"},
+        "opencode_config": config, "tool_fingerprints": read_json(PRIVATE / "host-validation.json")["tools"]})
+    log(f"{name} paired a laptop connector for {directory} (bundle local/full-loop/laptop/{bundle}.json, private, connector expires in 23h).")
+
+
+def stage_settle(task_ref):
+    """Gateway operator settlement for a task run from a laptop (after the developer
+    ended it in OpenCode): close its binding and show the known cost. Reports nothing
+    for the developer; model and result stay theirs to report."""
+    if not re.fullmatch(r"[0-9a-f-]{36}", task_ref):
+        raise SystemExit("Give the task reference from /tarkado-delivery-browser (/tasks/<ref>/).")
+    task_path = f"/tasks/{task_ref}/"
+    binding = binding_ref_of(task_path)
+    if not binding:
+        raise SystemExit("That task has no gateway binding.")
+    closed = gateway_call("close", {"binding_ref": binding})
+    log(f"gateway operator closed binding {binding[:8]}... for task {task_ref[:8]}...: " + json.dumps(
+        {key: closed.get(key) for key in ("closed", "known_cost_usd", "unknown_attempts")}, sort_keys=True))
+    log("  " + delivery_line(browser("owner").get(task_path).html))
+
+
 def plugin_options(name):
     return {"privateDeveloperService": True, "credentialFile": str(PRIVATE / f"connector-{name}.json"),
             "gatewayRef": load_state()["gateway"]["reference"], "providerID": "company", "gatewayOrigin": GATEWAY + "/"}
@@ -1023,7 +1071,7 @@ def stage_relearn(label="relearn"):
         stage_publish(label)
 
 
-STAGES = {"relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
+STAGES = {"laptop": stage_laptop, "settle": stage_settle, "relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in STAGES:
