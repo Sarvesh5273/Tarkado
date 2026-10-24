@@ -1,0 +1,79 @@
+{
+  "_comment": "DEMO fixture tasks for the Tarkado full loop. Instructions are fixed demo text, not private developer prompts. Runtime outputs stay under local/full-loop/ (gitignored).",
+  "instructions": {
+    "documentation": "In this repository, add concise, accurate docstrings to {target}: a module docstring as the very first statement of the file, and a docstring for every public function, class and method in it. Only add docstrings: do not change any code, names, signatures, imports, formatting of code lines, or behaviour. Do not create or modify any other file. Work only with the read/search/edit tools; when the docstrings are in place, stop.",
+    "test_generation": "In this repository, create a new file {test_file} containing at least three new unittest test methods for {module}, importing it as `import {module}` or `from {module} import ...`. Do not modify any file under inventory/ or any existing test. Work only with the read/search/edit/write tools; when the new tests are written, stop."
+  },
+  "shadow": [
+    {
+      "id": "S1",
+      "persona": "senior",
+      "category": "documentation",
+      "target": "inventory/stock.py",
+      "selected_model": "company/sol",
+      "response": "accept"
+    },
+    {
+      "id": "S2",
+      "persona": "senior",
+      "category": "documentation",
+      "target": "inventory/pricing.py",
+      "selected_model": "company/sol",
+      "response": "accept"
+    },
+    {
+      "id": "S3",
+      "persona": "senior",
+      "category": "documentation",
+      "target": "inventory/reports.py",
+      "selected_model": "company/sol",
+      "response": "accept"
+    },
+    {
+      "id": "J1",
+      "persona": "junior",
+      "category": "documentation",
+      "target": "inventory/orders.py",
+      "selected_model": "company/sol",
+      "response": "accept"
+    },
+    {
+      "id": "T1",
+      "persona": "senior",
+      "category": "test_generation",
+      "target": "inventory/suppliers.py",
+      "selected_model": "company/sol",
+      "response": "reject"
+    }
+  ],
+  "routed": [
+    {
+      "id": "R1",
+      "persona": "junior",
+      "category": "documentation",
+      "target": "inventory/returns.py",
+      "selected_model": "company/sol"
+    },
+    {
+      "id": "R2",
+      "persona": "senior",
+      "category": "documentation",
+      "target": "inventory/suppliers.py",
+      "selected_model": "company/sol"
+    }
+  ],
+  "failure_drill": {
+    "id": "F1",
+    "persona": "junior",
+    "category": "documentation",
+    "target": "inventory/stock.py",
+    "selected_model": "company/sol"
+  },
+  "after_rollback": {
+    "id": "N1",
+    "persona": "junior",
+    "category": "documentation",
+    "target": "inventory/pricing.py",
+    "selected_model": "company/sol"
+  }
+}

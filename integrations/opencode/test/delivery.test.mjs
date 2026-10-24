@@ -4,7 +4,7 @@ import { FreshSessionDeliveryAdapter, registerDeliveryHooks } from "../src/deliv
 import { BoundarySelection } from "../src/boundary-selection.mjs"
 import { DeliveryCoordinator } from "../src/delivery-coordinator.mjs"
 
-function setup() {
+function setup(echo = value => ({ ...value })) {
   const calls = []
   const request = { selection_id: "controlled-selection", boundary: "new_task", repository_ref: "synthetic", task: {}, reserve_usd: "0.10", override_model: null }
   const choice = { model: "fixture/cheap", maxCostUSD: "0.10", selectionID: request.selection_id }
@@ -18,7 +18,7 @@ function setup() {
     return { binding_ref: "controlled-binding", task_token: "synthetic-private-task-token", model: choice.model,
       task_cap_usd: choice.maxCostUSD, gateway_model: "company-cheap", provider_model: "controlled-provider", session_ref: adapter.pendingSessionReference() }
   } }
-  const session = { async create(value) { calls.push({ method: "create", value }); return { ...value } } }
+  const session = { async create(value) { calls.push({ method: "create", value }); return echo(value) } }
   adapter = new FreshSessionDeliveryAdapter({ company, session, gatewayRef: "controlled-gateway", providerID: "company", gatewayOrigin: "https://gateway.company.example" })
   adapter.setDescriptor({ request, scopeRef: "controlled-scope", connectorTaskRef: "controlled-task", locationHash: "a".repeat(64), sessionRef: adapter.pendingSessionReference() })
   return { adapter, request, choice, calls, company }
@@ -30,8 +30,15 @@ test("concrete fresh-session adapter joins selection claim binding and create wi
   assert.equal(result.modelApplied, true)
   assert.equal(result.executionSent, false)
   assert.deepEqual(calls.map(x => x.method), ["delivery-preflight", "conditional-select", "conditional-claim", "delivery-bind", "create"])
-  assert.deepEqual(calls.at(-1).value.model, { providerID: "company", id: "company-cheap" })
+  assert.deepEqual(calls.at(-1).value.model, { providerID: "company", id: "company-cheap", variant: "default" })
   await assert.rejects(adapter.inspect(request), /unused explicit/)
+})
+
+test("a host that echoes a different model variant keeps the claim spent and gets no binding", async () => {
+  const { adapter, request, company } = setup(value => ({ ...value, model: { ...value.model, variant: "high" } }))
+  await assert.rejects(new BoundarySelection({ company, adapter }).prepare({ scopeRef: "controlled-scope", connectorTaskRef: "controlled-task",
+    locationHash: "a".repeat(64), request }), /exact fresh root\/model/)
+  assert.equal(adapter.binding, null)
 })
 
 test("binding an existing descriptor or changed model cannot create another session", async () => {

@@ -16,4 +16,6 @@ export const Tarkado = Rpc.define({
       expectedRevision: { type: "integer", minimum: 1 }, value: { anyOf: [string, { type: "object" }] } }), output: result },
     close: { input: obj({ sessionID: string }), output: result },
   },
+  // OpenCode 2.0.21 registration enumerates `events`; this RPC publishes none.
+  events: {},
 })

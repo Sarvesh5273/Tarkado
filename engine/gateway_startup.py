@@ -2,17 +2,24 @@
 
 import os
 
-from engine.litellm_delivery import CompanyBackend, make_callback
+from engine.litellm_delivery import CompanyBackend, make_callback, provider_endpoint, provider_overrides
 from engine.schemas import ValidationError, integer, object_fields, strings, text
 from engine.startup_config import private_json
 
 
+BASE_FIELDS = ("schema_version", "company_origin", "credential_file", "managed_aliases", "managed_deployment_ids", "timeout_seconds")
+# Version 2 adds ONE exact reviewed provider endpoint and the gateway-owned provider
+# settings added after request validation. Provider keys stay in LiteLLM's own
+# configuration; this file never holds or selects them.
+PROVIDER_FIELDS = ("provider_api_base", "provider_request_overrides")
+
+
 def callback_from_config(path):
     value = private_json(path)
-    fields = ("schema_version", "company_origin", "credential_file", "managed_aliases", "managed_deployment_ids", "timeout_seconds")
-    object_fields(value, fields, fields)
-    if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+    if not isinstance(value, dict) or type(value.get("schema_version")) is not int or value["schema_version"] not in (1, 2):
         raise ValidationError("Unsupported gateway startup configuration.")
+    fields = BASE_FIELDS + (PROVIDER_FIELDS if value["schema_version"] == 2 else ())
+    object_fields(value, fields, fields)
     aliases = strings(value["managed_aliases"], "managed_aliases")
     deployments = strings(value["managed_deployment_ids"], "managed_deployment_ids")
     if not aliases or not deployments:
@@ -30,8 +37,12 @@ def callback_from_config(path):
     token = credential["credential"]
     if not isinstance(token, str) or len(token) != 43 or any(ch not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-" for ch in token):
         raise ValidationError("Scoped machine credential has an invalid shape.")
+    provider = {}
+    if value["schema_version"] == 2:
+        provider = {"provider_api_base": provider_endpoint(value["provider_api_base"]),
+                    "provider_settings": provider_overrides(value["provider_request_overrides"])}
     backend = CompanyBackend(value["company_origin"], token, timeout=timeout)
-    return make_callback(backend, managed_aliases=aliases, managed_deployment_ids=deployments)
+    return make_callback(backend, managed_aliases=aliases, managed_deployment_ids=deployments, **provider)
 
 
 def callback_from_environment():

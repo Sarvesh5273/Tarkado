@@ -13,4 +13,4 @@ export const DeliveryRPC = Rpc.define({ id: "tarkado.delivery.v1", methods: {
   feedback: { input: object({ sessionID: string, action: { type: "string", enum: ["response", "actual_model", "result"] },
     expectedRevision: { type: "integer", minimum: 1 }, value: { anyOf: [string, { type: "object" }] } }), output: { type: "object" } },
   end: { input: object({ sessionID: string }), output: { type: "object" } },
-} })
+}, events: {} }) // OpenCode 2.0.21 registration enumerates `events`; none are published.
