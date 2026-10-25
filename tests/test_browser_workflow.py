@@ -477,7 +477,7 @@ class BrowserWorkflowTests(TestCase):
             with patch("socket.socket", side_effect=AssertionError("No external access")), patch("subprocess.run", side_effect=AssertionError("No model/client calls")):
                 page = self.client.get(path)
             self.assertEqual(page["Cache-Control"], "no-store")
-            self.assertEqual(page["Referrer-Policy"], "no-referrer")
+            self.assertEqual(page["Referrer-Policy"], "same-origin")
             self.assertEqual(page["X-Frame-Options"], "DENY")
 
 

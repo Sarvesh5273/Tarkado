@@ -256,7 +256,7 @@ class ConnectorTests(TestCase):
             response = self.api(value, "status", {"location_sha256": credential.scope["location_sha256"]})
             self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
 
     def test_migration_matches_models_without_replacing_baseline_tables(self):
         call_command("makemigrations", "company", check=True, dry_run=True, verbosity=0)
