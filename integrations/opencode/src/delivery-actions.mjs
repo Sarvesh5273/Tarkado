@@ -41,9 +41,68 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
     catch { context.ui.toast.show({ title: "Tarkado delivery", message: "Delivery action refused/unavailable. Inspect company scope, verifier setup, pairing and retained accounting. Do not repeat a lost task start; use browser recovery.", variant: "error" }) }
     finally { busy = false }
   }
+  // Sessions started through `quick`: only these get the gateway-observed model report at end.
+  const quickSessions = new Set()
+  const supported = configuration => configuration.source_kind === "team" && configuration.collection_supported
+    && configuration.gateways?.some(row => row.gateway_ref === configuration.gateway_ref)
+  const usable = configuration => configuration.scopes.filter(row => row.status === "active" && row.authority_current && row.routes.length
+    && row.accounting.remaining_task_slots > 0)
   return {
     refresh: feedback.refresh,
     accept: feedback.accept, reject: feedback.reject, reportModel: feedback.reportModel, result: feedback.result, browser: feedback.browser,
+    // One-confirmation start. Every bound comes from approver-reviewed defaults shipped with
+    // the pairing (quick_start); the confirmation states them and is the developer's explicit
+    // acceptance. Anything ambiguous (several scopes or categories) asks; anything missing refuses.
+    quick: run(async () => {
+      const original = snapshot()
+      const configuration = await rpc.connect({}, { location: original.location })
+      if (!supported(configuration)) throw new Error("No supported paired gateway/collection setup.")
+      const defaults = configuration.quick_start
+      if (!defaults) throw new Error("No reviewed quick-start defaults are configured; use /tarkado-delivery-start.")
+      const scopes = usable(configuration)
+      if (!scopes.length) throw new Error("No separately approved/verified scope is available.")
+      let scope = scopes[0]
+      if (scopes.length > 1) {
+        const scopeRef = await context.ui.dialog.select({ title: "Which approved trial?", options: scopes.map(row => ({
+          title: `${row.pilot_id} · remaining USD ${row.accounting.remaining_usd}`, value: row.scope_ref })) })
+        if (scopeRef === undefined) return
+        scope = scopes.find(row => row.scope_ref === scopeRef)
+      }
+      let route = scope.routes[0]
+      if (scope.routes.length > 1) {
+        const taskType = await context.ui.dialog.select({ title: "What kind of task is this?", options: scope.routes.map(row => ({ title: `${row.task_type} → ${row.model}`, value: row.task_type })) })
+        if (taskType === undefined) return
+        route = scope.routes.find(row => row.task_type === taskType)
+      }
+      const capabilities = new Set((route.local_tools ?? []).map(tool => tool.capability))
+      const requiredTools = (defaults.requiredTools ?? []).filter(value => capabilities.has(value))
+      const contextTokens = defaults.contextTokens, outputLimit = defaults.outputLimit, capText = String(defaults.taskCapUSD ?? "")
+      if (!Number.isSafeInteger(contextTokens) || contextTokens < 1 || !Number.isSafeInteger(outputLimit) || outputLimit < 1
+        || !/^\d+(\.\d+)?$/.test(capText) || !/[1-9]/.test(capText) || !configuration.models.includes(defaults.selectedModel)
+        || !/^[A-Za-z0-9_-]{1,24}$/.test(defaults.labelPrefix ?? "")) throw new Error("Quick-start defaults are incomplete or invalid.")
+      const stamp = new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15)
+      const taskLabel = `${defaults.labelPrefix}-${stamp}`
+      const accepted = await context.ui.dialog.confirm({ title: "Tarkado suggestion", message:
+        `This ${route.task_type} task can use ${route.model} instead of your usual ${defaults.selectedModel}.\n`
+        + `Approved trial: ${scope.pilot_id} (USD ${scope.accounting.remaining_usd} left). This task: at most USD ${capText}.\n`
+        + `Opens a new session for it; your current work and model stay unchanged.`,
+        label: { confirm: "Use suggestion", cancel: "Keep mine" } })
+      if (!accepted) return
+      sameContext(original)
+      const result = await rpc.start({ scopeRef: scope.scope_ref, repositoryRef: configuration.repository_ref, taskLabel, taskType: route.task_type, riskTags: ["low"],
+        selectedModel: defaults.selectedModel, overrideModel: null, contextTokens, outputLimit, taskCapUSD: capText, clientTaskID: randomUUID(), requiredTools }, { location: original.location })
+      if (!result.sessionCreated || result.executionSent !== false) throw new Error("No exact newly created bound session was returned.")
+      sameContext(original)
+      context.ui.router.navigate({ type: "session", sessionID: result.sessionID })
+      quickSessions.add(result.sessionID)
+      // "Use suggestion" was the explicit acceptance; record it for this task only.
+      try {
+        const current = await rpc.state({ sessionID: result.sessionID }, { location: original.location })
+        if (current.task && current.task.response == null) await rpc.feedback({ sessionID: result.sessionID, action: "response",
+          expectedRevision: current.task.task_revision, value: "accept" }, { location: original.location })
+      } catch { context.ui.toast.show({ title: "Tarkado delivery", message: "Session started, but the acceptance was not recorded. Use /tarkado-delivery-accept.", variant: "warning" }) }
+      await feedback.refresh()
+    }),
     connect: run(async () => {
       const configuration = await rpc.connect({}, { location: plainLocation(context) })
       context.ui.toast.show({ title: "Tarkado delivery", message: `${configuration.scopes?.length ?? 0} paired scope records. This is not permission to execute; independent verification is rechecked.`, variant: "info" })
@@ -112,9 +171,29 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
         if (kind !== "idle") throw new Error("Task is not known idle.")
       }
       checkIdle()
-      if (!await context.ui.dialog.confirm({ title: "End this explicit task only", message: "Close the task without claiming success or refunding unknown costs. Outstanding settlement survives close/revocation.", label: { confirm: "End task", cancel: "Cancel" } })) return
+      // Quick sessions: report the model only when the company gateway shows every attempt
+      // completed on the bound model at a known cost, with nothing unknown or reserved.
+      let observed = null
+      if (quickSessions.has(id)) {
+        const current = await rpc.state({ sessionID: id }, { location: original.location })
+        const delivery = current.delivery
+        const attempts = delivery?.attempts ?? []
+        if (current.task && current.task.reported_actual_model == null && delivery?.policy_model && Number(delivery.unknown_attempts) === 0
+          && Number(delivery.attempt_reserved_usd) === 0 && Number(delivery.known_cost_usd) > 0 && attempts.length
+          && attempts.every(attempt => attempt.outcome === "completed")) observed = delivery.policy_model
+      }
+      if (!await context.ui.dialog.confirm({ title: "End this task", message: observed
+        ? `Close the task and report ${observed} as the model used (observed by the company gateway). This does not claim the work is good; costs are kept.`
+        : "Close the task without claiming success or refunding unknown costs. Outstanding settlement survives close/revocation.", label: { confirm: "End task", cancel: "Cancel" } })) return
       sameContext(original); checkIdle()
       await rpc.end({ sessionID: id }, { location: original.location })
+      quickSessions.delete(id)
+      if (observed) {
+        try {
+          const current = await rpc.state({ sessionID: id }, { location: original.location })
+          await rpc.feedback({ sessionID: id, action: "actual_model", expectedRevision: current.task.task_revision, value: observed }, { location: original.location })
+        } catch { context.ui.toast.show({ title: "Tarkado delivery", message: "Task ended, but the model report was not recorded. Use /tarkado-delivery-report-model.", variant: "warning" }) }
+      }
       await feedback.refresh()
     }),
   }

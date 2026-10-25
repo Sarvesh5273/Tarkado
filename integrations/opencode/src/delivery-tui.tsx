@@ -7,7 +7,7 @@ import { deliveryActions, deliveryLines } from "./delivery-actions.mjs"
 export default Plugin.define({ id: "tarkado.delivery.cli", setup(context) {
   const [status, setStatus] = createSignal<any>({ task: null, delivery: null })
   const act = deliveryActions({ rpc: context.client.rpc(DeliveryRPC), context, status, setStatus })
-  const commands = [["connect", "Inspect delivery setup", act.connect], ["start", "Create NEW bound task session (no prompt)", act.start],
+  const commands = [["quick", "Start a task with the Tarkado suggestion (one confirmation)", act.quick], ["connect", "Inspect delivery setup", act.connect], ["start", "Create NEW bound task session (no prompt)", act.start],
     ["end", "End this delivery task; retain costs", act.end], ["accept", "Accept this suggestion only", act.accept],
     ["reject", "Reject this suggestion only", act.reject], ["report-model", "Report actual policy model used", act.reportModel],
     ["result", "Report eventual engineering result", act.result], ["browser", "Show private company record path", act.browser]] as const
@@ -24,7 +24,7 @@ export default Plugin.define({ id: "tarkado.delivery.cli", setup(context) {
   context.ui.slot({ append: "session.panel", render: panel => <Show when={panel.name === "tarkado.delivery.task"}>
     <box flexDirection="column"><text>Explicit delivery — separate approval, fixed model</text>
       <For each={deliveryLines(status())}>{line => <text wrapMode="word">{line}</text>}</For>
-      <text>/tarkado-delivery-start · /tarkado-delivery-end · /tarkado-delivery-report-model · /tarkado-delivery-result</text>
+      <text>/tarkado-delivery-quick · /tarkado-delivery-end · /tarkado-delivery-start · /tarkado-delivery-report-model · /tarkado-delivery-result</text>
     </box>
   </Show> })
 } })

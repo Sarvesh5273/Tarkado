@@ -779,7 +779,10 @@ def stage_laptop(name, directory, bundle):
         "company_origin": COMPANY, "gateway_key": person["gateway_key"],
         "connector": {"origin": COMPANY, "credential": value.group(1)},
         "plugin_options": {"privateDeveloperService": True, "gatewayRef": state["gateway"]["reference"], "providerID": "company",
-                           "gatewayOrigin": GATEWAY + "/"},
+                           "gatewayOrigin": GATEWAY + "/",
+                           # One-confirmation start: the same bounds the reviewed routed runs use.
+                           "quickStart": {"selectedModel": "company/sol", "requiredTools": ["read", "edit"], "contextTokens": 20000,
+                                          "outputLimit": 4096, "taskCapUSD": "0.10", "labelPrefix": name}},
         "opencode_config": config, "tool_fingerprints": read_json(PRIVATE / "host-validation.json")["tools"]})
     log(f"{name} paired a laptop connector for {directory} (bundle local/full-loop/laptop/{bundle}.json, private, connector expires in 23h).")
 

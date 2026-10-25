@@ -1204,4 +1204,5 @@ existing gateway rather than becoming another gateway.
   commands and ten start dialogs with one "Use it / Keep mine" prompt; source everything
   else from approved per-category defaults, the gateway and passive signals. Design and
   open decisions in [LOW_FRICTION_FLOW.md](LOW_FRICTION_FLOW.md). Category: developer
-  picks first; local inference later.
+  picks first; local inference later. DEMO first step done 2026-10-25: `/tarkado-delivery-quick`
+  with bundle defaults (see LOW_FRICTION_FLOW.md status for the remaining gaps).

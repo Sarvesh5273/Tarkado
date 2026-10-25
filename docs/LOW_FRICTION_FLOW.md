@@ -1,7 +1,13 @@
-# Low-friction developer flow (design, not built)
+# Low-friction developer flow (design; first step built)
 
-**Status:** owner direction 2026-10-25, after the first real laptop run. Not implemented.
-The current plugin flow stays as the DEMO flow until this is built and tested.
+**Status:** owner direction 2026-10-25, after the first real laptop run. First step built
+and verified in real OpenCode 2.0.21 on 2026-10-25: `/tarkado-delivery-quick` (one
+"Use suggestion / Keep mine" confirmation that also records the acceptance) and an end step
+that reports the gateway-observed model only for a clean, known-cost run. Gaps against the
+design below: the defaults come from the private laptop bundle (`quickStart`), not from
+approver-set per-category defaults in the approved scope; the original model is the bundle
+default, not the model selected in OpenCode; "Keep mine" records nothing (no task exists to
+attach a rejection to); the developer still types start and end commands.
 
 ## Problem
 

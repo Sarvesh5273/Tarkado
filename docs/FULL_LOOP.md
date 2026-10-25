@@ -59,8 +59,16 @@ On the laptop, from a checkout of this branch:
    DEMO repository at the bundle path, checks both URLs, and checks that this OpenCode's tool
    definitions match the reviewed host (otherwise the gateway would refuse every request).
 2. `node demo/laptop/start-demo.mjs start <bundle.json>`, then in OpenCode:
-   `/tarkado-delivery-start` → answer the dialogs → `/tarkado-delivery-accept` → type the
-   task → wait until it is idle → `/tarkado-delivery-end`. **Keep OpenCode open until end.**
+   `/tarkado-delivery-quick` → **Use suggestion** (one confirmation; records the acceptance)
+   → type the task → wait until it is idle → `/tarkado-delivery-end` → **End task**.
+   **Keep OpenCode open until end.** "Keep mine" (or Esc) starts nothing.
+   Quick start takes every bound from the bundle's reviewed `quickStart` defaults
+   (original choice company/sol, read+edit tools, 20k context, 4096 output, USD 0.10 cap,
+   label `<persona>-<UTC timestamp>`); it only asks which trial/category when more than one
+   applies. At end it reports the model only if the gateway shows every attempt completed on
+   the bound model at a known cost with nothing unknown or reserved; otherwise it reports
+   nothing. `/tarkado-delivery-start` remains the fully explicit path (and the only path for
+   bundles without `quickStart`, which need regenerating to use quick start).
 3. On the host: `settle <task_ref>` (gateway close, known cost).
 
 The model is reported from the laptop; the result stays unknown there (the CI key stays on

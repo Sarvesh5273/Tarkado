@@ -192,7 +192,7 @@ async function main() {
     return
   }
   const env = isolatedEnv(base, { OPENCODE_CONFIG: configFile, COMPANY_GATEWAY_KEY: bundle.gateway_key })
-  say("Opening OpenCode. In OpenCode type /tarkado-delivery-start to begin a routed task.")
+  say("Opening OpenCode. In OpenCode type /tarkado-delivery-quick to start a task with the Tarkado suggestion.")
   const child = spawn(OPENCODE, ["--standalone"], { cwd: directory, env, stdio: "inherit" })
   child.on("exit", code => process.exit(code ?? 0))
 }
