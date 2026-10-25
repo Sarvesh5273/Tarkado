@@ -53,9 +53,12 @@ reachable from the laptop.
 
 On the host (the pilot, gateway and connectors expire within 24 h, so do this the same day):
 
-1. `rescope <label> <new pilot id>` if the pilot is stale or expired, and renew the gateway.
-2. `laptop <persona> <exact absolute repo path on the laptop> <bundle>` writes the private
-   bundle `local/full-loop/laptop/<bundle>.json`. Send it privately; never commit it.
+1. `renew` issues a new gateway identity (they last 20 h) and restarts LiteLLM with it.
+2. `rescope <new label> <new pilot id> documentation,test_generation` reviews the evidence
+   again and approves a new trial (10 h). Labels and pilot ids are never reused.
+3. `laptop <persona> <exact absolute repo path on the laptop> <bundle>` writes the private
+   bundle `local/full-loop/laptop/<bundle>.json` (it embeds the gateway reference, so make it
+   after `renew`). Send it privately; never commit it.
 
 On the laptop, from a checkout of this branch:
 

@@ -17,6 +17,7 @@ Stages (run in order; each is idempotent where the product is):
   routed     R1/R2 (documentation), R3 (test writing) through OpenCode -> LiteLLM -> provider, settlement, feedback
   relearn    the next learning review including routed outcomes
   drill      F1 failure: provider path lost mid-attempt -> pause -> rollback -> N1
+  renew      demo day: new 20 h gateway identity, LiteLLM restart (then regenerate laptop bundles)
   laptop     pair a laptop and write its private bundle
   settle     manual fallback: close one task's cost record
   status     print a metadata summary
@@ -736,14 +737,14 @@ def restart_litellm():
     wait_for(gateway_up, "LiteLLM to come back up behind the gateway", 180)
 
 
-def issue_gateway(state):
+def issue_gateway(state, gateway_id="demo-litellm-gateway"):
     page = browser("owner").get("/gateways/")
     labels = dict(re.findall(r'<label for="id_(user_\d+)">LiteLLM authenticated user ID for ([^<]+)</label>', page.html))
     mapping = {field: f"employee-{developer.strip().rstrip(':')}" for field, developer in labels.items()
                if developer.strip().rstrip(':') in ("senior", "junior")}
     if len(mapping) != 2:
         raise RuntimeError(f"Gateway form did not offer both developers: {sorted(labels.values())}")
-    page = secure_submit("owner", "/gateways/", {"gateway_id": "demo-litellm-gateway", "repository_ref": REPOSITORY, "confirmation": "on",
+    page = secure_submit("owner", "/gateways/", {"gateway_id": gateway_id, "repository_ref": REPOSITORY, "confirmation": "on",
                                                  "expires_at": (now() + timedelta(hours=20)).isoformat(), **mapping}, "gateway_id", page=page)
     value = re.search(r'<pre id="gateway-credential">([A-Za-z0-9_-]{43})</pre>', page.html)
     reference = re.search(r"Gateway reference ([0-9a-f-]{36})", text_of(page.html))
@@ -829,6 +830,21 @@ def stage_settle(task_ref):
 def plugin_options(name):
     return {"privateDeveloperService": True, "credentialFile": str(PRIVATE / f"connector-{name}.json"),
             "gatewayRef": load_state()["gateway"]["reference"], "providerID": "company", "gatewayOrigin": GATEWAY + "/"}
+
+
+def stage_renew():
+    """Demo-day renewal: a gateway identity lasts 20 h, so the owner issues a new one, LiteLLM
+    restarts with it and the host OpenCode configs point at it. Laptop bundles embed the
+    gateway reference: regenerate them afterwards with the laptop stage. (Host developer
+    connectors are not renewed; each laptop bundle pairs its own connector.)"""
+    state = load_state()
+    issue_gateway(state, f"demo-litellm-gateway-{now():%Y%m%d-%H%M}")
+    restart_litellm()
+    log("LiteLLM restarted with the renewed gateway identity.")
+    for name in ("senior", "junior"):
+        write_oc_config(name, plugin_options(name))
+        start_opencode(name, restart=True)
+    log("Host OpenCode configs use the renewed gateway. Regenerate laptop bundles with the laptop stage.")
 
 
 def stage_delivery():
@@ -921,7 +937,7 @@ def stage_rescope(label="rescope", pilot_id="demo-documentation-luna-2", task_ty
     # No current pilot when the previous rescope's approval was refused (it was already retired).
     if "pilot" in state and state["pilot"].get("pilot_id", "demo-documentation-luna") != pilot_id:
         if not state["pilot"].get("rolled_back"):
-            pilot_control("revoke", "DEMO full loop: live authority went stale after interrupted-start gaps; revoke before a new review")
+            pilot_control("revoke", f"DEMO full loop: replace this trial with a newly reviewed one ({label})")
         state = load_state()
         state.setdefault("retired_pilots", []).append(state.pop("pilot"))
         save_state(state)
@@ -1098,7 +1114,7 @@ def stage_relearn(label="relearn"):
         stage_publish(label)
 
 
-STAGES = {"laptop": stage_laptop, "settle": stage_settle, "relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
+STAGES = {"laptop": stage_laptop, "settle": stage_settle, "renew": stage_renew, "relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in STAGES:
