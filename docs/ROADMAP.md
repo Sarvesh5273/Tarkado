@@ -50,5 +50,5 @@ everything else is planned, not built.
 ## Not built yet
 
 Public-evidence import for phase 0 · blind side-by-side sampling · per-reasoning-effort tracking ·
-a failure-rate threshold (today one bad rating pauses) · CI on the pushed change for laptop work · the investigation action · per-prompt (rather than
-per-task) suggestions.
+a failure-rate threshold (today one bad rating pauses) · CI on the pushed change for laptop
+work · the investigation action · per-prompt (rather than per-task) suggestions.

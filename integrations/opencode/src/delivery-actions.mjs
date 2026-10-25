@@ -6,9 +6,10 @@ const TASK_NAMES = { documentation: "documentation", test_generation: "test-writ
 export const taskName = type => TASK_NAMES[type] ?? type
 
 // End-of-task rating: each score names how much the developer had to fix, so ratings mean
-// the same thing across people. Stored as score/5 (the result score is 0..1) with
-// desired_result left unknown: the company only accepts a decided result once the gateway
-// has closed the task's cost record, so the decision (4-5 = desired) is made at settlement.
+// the same thing across people. The rating is the task's one result: 4-5 = desired result,
+// 0-3 = not, score = rating/5 (the result score is 0..1). It is recorded once the task has
+// ended with every attempt cost known (right after End, or in the background while a cost
+// is still arriving); a task is rated once, because a second result pauses the trial.
 export const RATINGS = [["5", "Used as-is"], ["4", "Small fixes only"], ["3", "Usable after real edits"],
   ["2", "Mostly redone"], ["1", "Wrong or unusable"], ["0", "Harmful: broke something or misleading"]]
 const ratingText = score => score === null || score === undefined ? "not rated" : `${Math.round(Number(score) * 5)}/5`
