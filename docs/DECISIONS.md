@@ -284,6 +284,7 @@ primary documentation already checked.
 | Active-learning algorithm | Useful possibility, not a claim yet. | After random-selection baseline exists. |
 | First gateway export | LiteLLM Proxy → company OpenAI API is accepted as the first delivery reference (AD-01). Exact stable policy/export contract remains B-07 work; no gateway or SDK is installed. | After supported adapter/binding/accounting design is implemented and the local policy format is stable. |
 | Laya integration | Optional research track. | Only after baseline is measured. |
+| Developer-facing task flow | Owner direction 2026-10-25: do not interrupt developers; target one "Use it / Keep mine" prompt, with bounds from approved per-category defaults and actual model/results from the gateway and passive signals. Design only; see [LOW_FRICTION_FLOW.md](LOW_FRICTION_FLOW.md). Category source (developer pick vs local inference) is open. | After the 2026-10-26 demo, before any real team pilot. |
 
 ## Rejected directions
 

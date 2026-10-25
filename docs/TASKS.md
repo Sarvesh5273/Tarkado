@@ -1200,3 +1200,8 @@ existing gateway rather than becoming another gateway.
 - [ ] **Packaged local install** of the demo stack (company app, LiteLLM, OpenCode plugin)
   for a developer laptop.
 
+- [ ] **Low-friction developer flow** (owner direction 2026-10-25): replace the four
+  commands and ten start dialogs with one "Use it / Keep mine" prompt; source everything
+  else from approved per-category defaults, the gateway and passive signals. Design and
+  open decisions in [LOW_FRICTION_FLOW.md](LOW_FRICTION_FLOW.md). Category: developer
+  picks first; local inference later.
