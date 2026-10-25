@@ -6,7 +6,7 @@ import { fingerprint } from "./client.mjs"
 import { ToolCapture } from "./tool-capture.mjs"
 
 export class DeliveryCoordinator {
-  constructor({ company, session, directory, gatewayRef, providerID, gatewayOrigin, toolFailureCapture = false }) {
+  constructor({ company, session, directory, gatewayRef, providerID, gatewayOrigin, toolFailureCapture = false, quickStart = null }) {
     this.company = company
     this.session = session
     this.location = fingerprint(directory)
@@ -18,6 +18,8 @@ export class DeliveryCoordinator {
     this.toolFailureCapture = toolFailureCapture
     this.captures = new Map()
     this.recoveryGaps = new Map()
+    // Approver-reviewed defaults for the one-confirmation start (DEMO bundle); null disables it.
+    this.quickStart = quickStart
   }
 
   async connect() {
@@ -37,7 +39,7 @@ export class DeliveryCoordinator {
         this.recoveryGaps.set(task.connector_task_ref, true)
       }
     }
-    return { ...result, gateway_ref: this.options.gatewayRef }
+    return { ...result, gateway_ref: this.options.gatewayRef, quick_start: this.quickStart }
   }
 
   async newTask(input) {

@@ -530,6 +530,7 @@ confirmation, usage, metadata limitations, and mock-test coverage.
 | [TASKS.md](docs/TASKS.md) | Ordered build roadmap and acceptance checks. |
 | [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Run the simulator, tests, and local policy export. |
 | [ROLLOUT.md](docs/ROLLOUT.md) | Offline candidate evaluation and rollout safety limits. |
+| [ROADMAP.md](docs/ROADMAP.md) | One-page model-adoption lifecycle: what exists today, recommended changes, engine rules to revisit. |
 | [UNCERTAINTY.md](docs/UNCERTAINTY.md) | Task-weighted estimates, confidence bounds, and sampling assumptions. |
 | [POLICY_HISTORY.md](docs/POLICY_HISTORY.md) | Local snapshots, review records, selection, and rollback. |
 | [PRIVACY_AUDIT.md](docs/PRIVACY_AUDIT.md) | Secret checks and metadata-only per-task audit exports. |

@@ -3,6 +3,80 @@
 This file prevents the project from drifting. A decision can be changed, but
 the reason and date must be recorded.
 
+## Full-loop demo on installed hosts — owner requested 2026-10-24
+
+The owner asked for the complete W-01–W-08 loop in one DEMO company before the
+2026-10-26 deadline, scoped to the loop itself (teammate routing ideas deferred).
+Running it against the installed OpenCode 2.0.21 and LiteLLM 1.104.0 hosts with a real
+provider exposed defects that controlled fixtures could not; each fix has tests.
+
+- **OpenCode adapter.** OpenCode 2.0.21 echoes every model ref with a variant and
+  enumerates an `events` field at plugin/RPC registration. The adapter now pins
+  `variant: "default"` and registers empty `events`; nothing else changed.
+- **Gateway startup schema v2.** Adds ONE exact reviewed `provider_api_base` and
+  gateway-owned `provider_request_overrides` applied only after the client request
+  validates. Provider keys stay in LiteLLM's own configuration. v1 files still load.
+- **LiteLLM runtime fields.** The real proxy adds `secret_fields`, `litellm_logging_obj`,
+  router flags, trace/session ids, `shared_session` and an unarmed compaction state
+  to every request. Each is accepted only in its proxy-produced inert form; any other
+  value (e.g. a forged `use_litellm_proxy: true`) is still refused at both stages.
+- **Attempt context placement.** The context was carried in a top-level
+  `litellm_params` key, which LiteLLM does not own and therefore lowered into the
+  provider body. The provider rejected the request ("Unknown parameter"), so no model
+  ran, but that rejected request did carry the internal attempt context (including the
+  task token) to the provider. The context now travels only in `metadata`, which the
+  pinned LiteLLM owns and never forwards (verified on the real proxy: the provider body
+  contains only `model`, `messages`, `max_completion_tokens`). Both post-call deployment
+  hooks receive the same kwargs, so settlement still finds the attempt.
+- **Demo runner honesty guard.** That failed task (R1b, run 1) was recorded by the runner
+  as "actual model luna, result failed" although the provider produced nothing. The runner
+  now reports a model/result only after a settled positive known cost, zero unknown
+  attempts and a non-failed OpenCode outcome. The R1b record itself is immutable and kept:
+  it is a gateway defect, not a luna outcome, and it correctly paused the pilot and now
+  blocks live approval of luna for documentation in that company (the readiness rule
+  "candidate evidence contains failures" is not weakened).
+- **DEMO thresholds 3/3** (senior successes / sessions) keep the demo short; they are
+  DEMO-only and labelled as such in every review.
+- **Run 1 retained, run 2 fresh.** Run 1 (local/full-loop-run1, gitignored) holds the real
+  failure → pause → rollback path, the gap recoveries, a rescope and the refused-task
+  close. The successful loop is re-run in a fresh DEMO company with the fixed code rather
+  than editing evidence.
+- **Recovery order** for lost starts: gateway close first, then end through the plugin
+  (no gap); browser end-interrupted only when the host lost the adapter (creates a gap,
+  so revoke → review → publish → new pilot id). Lost starts are never re-submitted and
+  task labels are never reused.
+
+Deferred (see TASKS.md, "Post-demo follow-ups"): the revision-0 settlement bug, teammate
+routing ideas, and a non-OpenAI provider binding.
+
+### Laptop demo (owner choice 2026-10-25: stack stays hosted, laptops run only OpenCode)
+
+Driving the real OpenCode 2.0.21 TUI (not the RPC driver) found defects the fixtures could not:
+
+- **Reactive proxies.** The TUI's route/location are reactive store proxies; `structuredClone`
+  refused them (DataCloneError), so every guided start was refused. Snapshots and every
+  `location` handed to RPC are now plain JSON copies.
+- **Session status shape.** The TUI's `session.status()` returns a bare string (`"idle"`), not
+  `{ type }`. The end guard only refused `type === "running"`, so it would have allowed ending
+  a running task. End now requires an explicit idle state in either shape; anything else refuses.
+- **Company call timeout 5 s → 30 s.** Conditional select re-verifies the live scope
+  (`live_guard`, ~2 s each on the DEMO host, several times per select); total time grows with
+  company history (2.6 s, 4.4 s, 9.7 s for successive tasks). A client timeout does not stop
+  the server, so the 5 s limit stranded a selection without claim or session (cancelled at $0;
+  the lifetime slot stays consumed). Making `live_guard` cheaper is deferred; it is O(history).
+- **Provider lock.** Without it OpenCode 2.0.21 also loads its built-in free hosted models
+  and defaults to one, so a prompt typed outside a bound task silently left the company
+  (seen once on a synthetic demo file). The DEMO config now denies every provider except
+  `company` (`experimental.policies`, `provider.use`).
+- **Windows credential file.** Windows has no POSIX owner/mode bits, so the plugin accepts a
+  drive-absolute path there and keeps the regular-file/no-link/size/swap checks, but the
+  file's privacy rests on the user profile ACL. Weaker than POSIX; DEMO limitation.
+- **Binding is in memory.** Closing OpenCode before `/tarkado-delivery-end` loses the
+  binding; the reopened session shows "no bound task". Recovery is gateway close + browser
+  end-interrupted (a gap, so the next pilot needs a rescope). Keep OpenCode open until end.
+- **No laptop CI result.** `ci.key` stays on the stack host, so laptop tasks report the model
+  only; the result stays unknown rather than self-attested.
+
 ## Public GitHub publication — owner authorized 2026-10-05
 
 After discussing open-source versus public source, the owner explicitly requested
@@ -210,6 +284,7 @@ primary documentation already checked.
 | Active-learning algorithm | Useful possibility, not a claim yet. | After random-selection baseline exists. |
 | First gateway export | LiteLLM Proxy → company OpenAI API is accepted as the first delivery reference (AD-01). Exact stable policy/export contract remains B-07 work; no gateway or SDK is installed. | After supported adapter/binding/accounting design is implemented and the local policy format is stable. |
 | Laya integration | Optional research track. | Only after baseline is measured. |
+| Developer-facing task flow | Owner direction 2026-10-25: do not interrupt developers; target one "Use it / Keep mine" prompt, with bounds from approved per-category defaults and actual model/results from the gateway and passive signals. Design only; see [LOW_FRICTION_FLOW.md](LOW_FRICTION_FLOW.md). Category source (developer pick vs local inference) is open. | After the 2026-10-26 demo, before any real team pilot. |
 
 ## Rejected directions
 

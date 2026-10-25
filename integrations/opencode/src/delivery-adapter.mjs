@@ -60,7 +60,9 @@ export class FreshSessionDeliveryAdapter {
     if (binding.model !== choice.model || binding.task_cap_usd !== choice.maxCostUSD || binding.session_ref !== this.sessionHash) {
       throw new Error("Server delivery binding differs from the exact task/model/budget/session.")
     }
-    const model = { providerID: this.providerID, id: binding.gateway_model }
+    // OpenCode 2.0.21 echoes every model ref with its variant; pin the explicit
+    // default (no reasoning variant) so the host must echo exactly this ref.
+    const model = { providerID: this.providerID, id: binding.gateway_model, variant: "default" }
     // Creation binds a model on a NEW isolated session. There is no get/switch
     // of another active session, and no user prompt is submitted here.
     const created = await this.session.create({ id: this.sessionID, model })

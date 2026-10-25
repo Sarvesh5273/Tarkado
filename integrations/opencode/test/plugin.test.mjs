@@ -22,6 +22,21 @@ test("private credential input refuses symlinks/loose modes and never installs a
   } finally { await rm(directory, { recursive: true, force: true }) }
 })
 
+test("Windows credential path: drive-absolute accepted, no POSIX mode check, links/relative still refused", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "tarkado-plugin-test-"))
+  const file = path.join(directory, "credential.json")
+  try {
+    await writeFile(file, JSON.stringify({ origin: "http://127.0.0.1:8000", credential: "b".repeat(43) }), { mode: 0o644 })
+    // Same file: POSIX refuses the loose mode, Windows (no mode bits) relies on the profile ACL.
+    await assert.rejects(credentialFile(file, "linux"), /owner-only/)
+    assert.equal((await credentialFile(file, "win32")).credential, "b".repeat(43))
+    await symlink(file, path.join(directory, "link.json"))
+    await assert.rejects(credentialFile(path.join(directory, "link.json"), "win32"), /owner-only/)
+    await assert.rejects(credentialFile("relative\\credential.json", "win32"), /explicit private/)
+    await assert.rejects(credentialFile("C:\\Users\\demo\\missing.json", "linux"), /explicit private/)
+  } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
 test("server entrypoint registers only observation hooks and scoped RPC with controlled host", async () => {
   const text = await readFile(new URL("../src/index.mjs", import.meta.url), "utf8")
   const hooks = [], rpc = []

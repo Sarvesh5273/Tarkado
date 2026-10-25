@@ -105,6 +105,45 @@ class PrivateStartupTests(TestCase):
             self.private(directory / "startup.json", changed)
             with self.assertRaises(ValidationError): callback_from_config(directory / "startup.json")
 
+    def test_gateway_v2_names_one_exact_provider_endpoint_and_only_reviewed_settings(self):
+        with tempfile.TemporaryDirectory(dir=support.TEMPORARY.name) as directory:
+            directory = Path(directory)
+            self.private(directory / "machine.json", {"origin": "https://policy.company.example", "credential": "s" * 43})
+            base = {"schema_version": 2, "company_origin": "https://policy.company.example", "credential_file": str(directory / "machine.json"),
+                    "managed_aliases": ["company-cheap"], "managed_deployment_ids": ["deployment-cheap"], "timeout_seconds": 10,
+                    "provider_api_base": "http://127.0.0.1:9/reviewed/v1",
+                    "provider_request_overrides": {"reasoning_effort": "none", "extra_body": {"prompt_cache_options": {"mode": "explicit"}}}}
+            self.private(directory / "startup.json", base)
+            with patch("engine.gateway_startup.make_callback", return_value="controlled-host-instance") as factory, patch("socket.socket", side_effect=AssertionError("No network during startup")):
+                self.assertEqual(callback_from_config(directory / "startup.json"), "controlled-host-instance")
+            self.assertEqual(factory.call_args.kwargs["provider_api_base"], "http://127.0.0.1:9/reviewed/v1")
+            self.assertEqual(factory.call_args.kwargs["provider_settings"],
+                             {"reasoning_effort": "none", "extra_body": {"prompt_cache_options": {"mode": "explicit"}}})
+            refused = [
+                {key: value for key, value in base.items() if key != "provider_api_base"},
+                {**base, "schema_version": 1},
+                {**base, "schema_version": 3},
+                {**base, "provider_api_key": "unsupported"},
+                {**base, "provider_api_base": "http://provider.example/v1"},
+                {**base, "provider_api_base": "https://user:secret@provider.example/v1"},
+                {**base, "provider_api_base": "https://provider.example/v1?key=value"},
+                {**base, "provider_request_overrides": {"reasoning_effort": "maximum"}},
+                {**base, "provider_request_overrides": {"extra_body": {"service_tier": "flex"}}},
+                {**base, "provider_request_overrides": {"extra_body": {"prompt_cache_options": {"mode": "implicit"}}}},
+                {**base, "provider_request_overrides": {"temperature": 0}},
+            ]
+            for value in refused:
+                self.private(directory / "startup.json", value)
+                with patch("engine.gateway_startup.make_callback") as factory, self.assertRaises(ValidationError):
+                    callback_from_config(directory / "startup.json")
+                factory.assert_not_called()
+            # Version 1 is unchanged: no provider fields reach the callback factory.
+            original = {key: value for key, value in base.items() if key not in ("provider_api_base", "provider_request_overrides")}
+            self.private(directory / "startup.json", {**original, "schema_version": 1})
+            with patch("engine.gateway_startup.make_callback", return_value="controlled-host-instance") as factory:
+                callback_from_config(directory / "startup.json")
+            self.assertEqual(set(factory.call_args.kwargs), {"managed_aliases", "managed_deployment_ids"})
+
     def test_gateway_origin_mismatch_and_missing_environment_never_guess_credentials(self):
         with tempfile.TemporaryDirectory(dir=support.TEMPORARY.name) as directory:
             directory = Path(directory)

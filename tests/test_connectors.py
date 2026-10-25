@@ -256,7 +256,7 @@ class ConnectorTests(TestCase):
             response = self.api(value, "status", {"location_sha256": credential.scope["location_sha256"]})
             self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], "no-store")
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
 
     def test_migration_matches_models_without_replacing_baseline_tables(self):
         call_command("makemigrations", "company", check=True, dry_run=True, verbosity=0)
@@ -371,3 +371,14 @@ class ConnectorJavaScriptTests(unittest.TestCase):
         result = subprocess.run(["node", "--test", *map(str, paths)], cwd=root, text=True, capture_output=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("fail 0", result.stdout)
+
+
+class ExactDirectoryTests(unittest.TestCase):
+    def test_posix_and_windows_drive_absolute_only(self):
+        accepted = ["/", "/Users/dev/demo", "C:\\Users\\dev\\demo", "d:\\work"]
+        refused = ["", "relative", "/Users/dev/demo/", "C:\\Users\\dev\\demo\\", "C:/Users/dev/demo", "C:\\", "C:demo",
+                   "\\\\server\\share\\demo", "\\\\?\\C:\\demo", "CC:\\demo", "C:\\Users\\a:b", "C:\\Users\\a\nb"]
+        for directory in accepted:
+            self.assertTrue(connectors.exact_directory(directory), directory)
+        for directory in refused:
+            self.assertFalse(connectors.exact_directory(directory), directory)

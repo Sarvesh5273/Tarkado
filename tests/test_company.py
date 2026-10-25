@@ -494,7 +494,7 @@ class CompanyAccountTests(TestCase):
     def test_browser_responses_prevent_caching_framing_and_referrer_leaks(self):
         response = self.client.get("/login/")
         self.assertEqual(response["Cache-Control"], "no-store")
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
         self.assertEqual(response["X-Frame-Options"], "DENY")
         self.assertIn("form-action 'self'", response["Content-Security-Policy"])
 

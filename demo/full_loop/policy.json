@@ -1,0 +1,34 @@
+{
+  "policy_version": "demo-full-loop-v1",
+  "default_model": "company/sol",
+  "models": [
+    {
+      "model_id": "company/luna",
+      "tier": "cheap",
+      "approved": true,
+      "task_types": ["documentation", "test_generation"],
+      "tools": ["read", "edit"],
+      "max_context_tokens": 128000
+    },
+    {
+      "model_id": "company/sol",
+      "tier": "premium",
+      "approved": true,
+      "task_types": ["*"],
+      "tools": ["read", "edit", "test"],
+      "max_context_tokens": 400000
+    }
+  ],
+  "rules": [
+    {
+      "task_type": "documentation",
+      "model": "company/luna",
+      "evidence_refs": ["demo:luna-documentation-hypothesis"]
+    },
+    {
+      "task_type": "test_generation",
+      "model": "company/luna",
+      "evidence_refs": ["demo:luna-test-generation-hypothesis"]
+    }
+  ]
+}

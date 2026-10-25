@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto"
 
+// The real TUI's context.location is a reactive store proxy; hand RPC calls a plain copy.
+export const plainLocation = context => JSON.parse(JSON.stringify(context.location))
+
 export function taskLines(state) {
   const task = state?.task
   if (!task) return ["No explicit Tarkado task. Start one before work; manual model choice is unchanged."]
@@ -31,7 +34,7 @@ export function actions({ rpc, context, status, setStatus }) {
   const refresh = async () => {
     const route = context.ui.router.current()
     if (route.type !== "session") { setStatus({ task: null }); return }
-    setStatus(await rpc.state({ sessionID: route.sessionID }, { location: context.location }))
+    setStatus(await rpc.state({ sessionID: route.sessionID }, { location: plainLocation(context) }))
   }
   const state = async () => { await refresh(); if (!status().task) throw new Error("Start an explicit task first."); return status().task }
   const checkContext = (id) => { if (sessionID() !== id) throw new Error("Session changed while editing feedback; no record submitted.") }
@@ -41,12 +44,12 @@ export function actions({ rpc, context, status, setStatus }) {
   }
   return {
     refresh,
-    connect: run(async () => { await rpc.connect({}, { location: context.location }); context.ui.toast.show({ message: "Tarkado connected. Explicit tasks only; model choice stays manual.", variant: "success" }) }),
+    connect: run(async () => { await rpc.connect({}, { location: plainLocation(context) }); context.ui.toast.show({ message: "Tarkado connected. Explicit tasks only; model choice stays manual.", variant: "success" }) }),
     start: run(async () => {
       const id = sessionID(true)
       const selected = context.ui.model.current()
       if (!selected?.providerID || !selected?.id) throw new Error("No explicit selected model.")
-      const configuration = await rpc.connect({}, { location: context.location })
+      const configuration = await rpc.connect({}, { location: plainLocation(context) })
       const taskLabel = await context.ui.dialog.prompt({ title: "Tarkado task label — metadata only", placeholder: "No prompt/code/output or secrets" })
       if (!taskLabel) return
       const taskType = await context.ui.dialog.select({ title: "Task category (declared, not inferred)", options: [
@@ -65,16 +68,16 @@ export function actions({ rpc, context, status, setStatus }) {
       const finalModel = context.ui.model.current()
       if (finalModel?.providerID !== selected.providerID || finalModel?.id !== selected.id) throw new Error("Selected model changed; review the new task again.")
       await rpc.start({ sessionID: id, clientTaskID: randomUUID(), taskLabel, selectedModel: `${selected.providerID}/${selected.id}`,
-        taskType: taskType || null, riskTags: risk ? [risk] : [], requiredTools: tools.split(",").map(s => s.trim()).filter(Boolean), contextTokens }, { location: context.location })
+        taskType: taskType || null, riskTags: risk ? [risk] : [], requiredTools: tools.split(",").map(s => s.trim()).filter(Boolean), contextTokens }, { location: plainLocation(context) })
     }),
-    accept: run(async () => { const id = sessionID(); const task = await state(); checkContext(id); await rpc.feedback({ sessionID: id, action: "response", expectedRevision: task.task_revision, value: "accept" }, { location: context.location }) }),
-    reject: run(async () => { const id = sessionID(); const task = await state(); checkContext(id); await rpc.feedback({ sessionID: id, action: "response", expectedRevision: task.task_revision, value: "reject" }, { location: context.location }) }),
+    accept: run(async () => { const id = sessionID(); const task = await state(); checkContext(id); await rpc.feedback({ sessionID: id, action: "response", expectedRevision: task.task_revision, value: "accept" }, { location: plainLocation(context) }) }),
+    reject: run(async () => { const id = sessionID(); const task = await state(); checkContext(id); await rpc.feedback({ sessionID: id, action: "response", expectedRevision: task.task_revision, value: "reject" }, { location: plainLocation(context) }) }),
     reportModel: run(async () => {
       const id = sessionID()
       const task = await state()
       const model = await context.ui.dialog.prompt({ title: "Model actually used — your report, not execution proof", placeholder: task.observed_attempt_models[0] ?? "provider/model" })
       checkContext(id)
-      if (model) await rpc.feedback({ sessionID: id, action: "actual_model", expectedRevision: task.task_revision, value: model }, { location: context.location })
+      if (model) await rpc.feedback({ sessionID: id, action: "actual_model", expectedRevision: task.task_revision, value: model }, { location: plainLocation(context) })
     }),
     result: run(async () => {
       const id = sessionID()
@@ -95,13 +98,13 @@ export function actions({ rpc, context, status, setStatus }) {
       await rpc.feedback({ sessionID: id, action: "result", expectedRevision: task.task_revision,
         value: { desired_result: bool(desired), tests_passed: bool(tests), score: null, cost_usd: null, latency_ms: null,
           ...(prior ? { score: prior.score, cost_usd: prior.cost_usd, latency_ms: prior.latency_ms } : {}),
-          evidence_ref: evidence || null, supersedes: prior?.result_id ?? null } }, { location: context.location })
+          evidence_ref: evidence || null, supersedes: prior?.result_id ?? null } }, { location: plainLocation(context) })
     }),
     close: run(async () => {
       const id = sessionID(true)
       if (await context.ui.dialog.confirm({ title: "End explicit task observation", message: "Wait until this task's work is done. Ending observation records no engineering success; unknowns and gaps remain.", label: { confirm: "End task", cancel: "Cancel" } })) {
         if (sessionID(true) !== id) throw new Error("Session changed during explicit close.")
-        await rpc.close({ sessionID: id }, { location: context.location })
+        await rpc.close({ sessionID: id }, { location: plainLocation(context) })
       }
     }),
     browser: run(async () => {

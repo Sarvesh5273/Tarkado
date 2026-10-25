@@ -11,7 +11,8 @@ export default Plugin.define({ id: "tarkado.delivery", async setup(ctx) {
   const configuration = await credentialFile(ctx.options.credentialFile)
   const coordinator = new DeliveryCoordinator({ company: new CompanyClient(configuration), session: ctx.session,
     directory: ctx.location.directory, gatewayRef: ctx.options.gatewayRef, providerID: ctx.options.providerID,
-    gatewayOrigin: ctx.options.gatewayOrigin, toolFailureCapture: ctx.options.toolFailureCapture === true })
+    gatewayOrigin: ctx.options.gatewayOrigin, toolFailureCapture: ctx.options.toolFailureCapture === true,
+    quickStart: ctx.options.quickStart ?? null })
   const rpc = await ctx.rpc.register(DeliveryRPC, { connect: () => coordinator.connect(), start: input => coordinator.newTask(input),
     state: input => coordinator.state(input.sessionID), feedback: input => coordinator.feedback(input), end: input => coordinator.end(input.sessionID) })
   const requests = await ctx.session.hook("http.request", event => coordinator.request(event))

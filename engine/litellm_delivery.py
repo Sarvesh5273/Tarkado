@@ -23,6 +23,43 @@ from engine.privacy import PrivacyError, ensure_safe
 CANDIDATE_LITELLM_VERSION = "1.104.0"
 CONTEXT_KEY = "tarkado_delivery_v1"
 META_FIELDS = ("tarkado_binding", "tarkado_task", "tarkado_session", "tarkado_request", "tarkado_kind")
+OFFICIAL_OPENAI_BASE = "https://api.openai.com/v1"
+REASONING_EFFORTS = ("none", "minimal", "low", "medium", "high")
+# The only reviewed provider body extension: explicit prompt caching means the
+# provider performs no implicit cache writes, whose separately billed tokens the
+# reviewed usage contract cannot price. Any other body field could bypass request
+# validation (for example a tier, count or tool setting), so it needs a new review.
+EXPLICIT_PROMPT_CACHE = {"prompt_cache_options": {"mode": "explicit"}}
+
+
+def provider_endpoint(value):
+    """One exact reviewed OpenAI-compatible base URL. Plain HTTP only on loopback."""
+    if not isinstance(value, str) or not value or value != value.strip() or len(value) > 512:
+        raise ValidationError("Configure one exact reviewed provider endpoint.")
+    parsed = urlsplit(value)
+    try:
+        parsed.port
+    except ValueError:
+        raise ValidationError("Provider endpoint has an invalid port.") from None
+    if (parsed.scheme not in ("https", "http") or not parsed.hostname or "*" in parsed.netloc or parsed.username or parsed.password
+        or parsed.query or parsed.fragment or parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1")):
+        raise ValidationError("Provider endpoint must be an exact HTTPS URL (HTTP only on this host's loopback) without credentials, query or fragment.")
+    return value
+
+
+def provider_overrides(value):
+    """Gateway-owned provider settings added after the client request is validated."""
+    object_fields(value, ("reasoning_effort", "extra_body"), ())
+    result = {}
+    if "reasoning_effort" in value:
+        if value["reasoning_effort"] not in REASONING_EFFORTS:
+            raise ValidationError("Unsupported reviewed reasoning setting.")
+        result["reasoning_effort"] = value["reasoning_effort"]
+    if "extra_body" in value:
+        if value["extra_body"] != EXPLICIT_PROMPT_CACHE:
+            raise ValidationError("Only the reviewed explicit prompt-cache body setting is supported.")
+        result["extra_body"] = copy.deepcopy(EXPLICIT_PROMPT_CACHE)
+    return result
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -58,10 +95,53 @@ class CompanyBackend:
             raise ValidationError("Policy metadata service refused or is unavailable; retain outstanding obligations.") from None
 
 
+_JSON_TYPES = (dict, list, str, int, float, bool, type(None))
+# Fields the installed LiteLLM 1.104.0 proxy/router itself sets (observed on the
+# real proxy, not only read from source). A client body can only decode to JSON
+# values and the proxy assigns these unconditionally, so each is accepted solely
+# in its proxy-produced, inert form; any other value still refuses the request.
+_ROUTER_FLAGS = ("allow_client_keepalive_override", "merge_reasoning_content_in_choices", "use_in_pass_through",
+                 "use_litellm_proxy", "use_xai_oauth")
+
+
+def _proxy_secret_fields(value):
+    return isinstance(value, dict) and set(value) == {"raw_headers"} and isinstance(value["raw_headers"], dict)
+
+
+def _host_runtime(data, physical):
+    """Return the request without host runtime fields, refusing any non-inert one."""
+    inert = {
+        "secret_fields": _proxy_secret_fields,
+        "litellm_logging_obj": lambda value: not isinstance(value, _JSON_TYPES),
+    }
+    if physical:
+        inert.update({key: (lambda value: value is False or value is None) for key in _ROUTER_FLAGS})
+        inert.update({
+            "litellm_session_id": lambda value: value is None or isinstance(value, str),
+            "litellm_trace_id": lambda value: value is None or isinstance(value, str),
+            # Transport only; it carries no request settings.
+            "shared_session": lambda value: value is None or not isinstance(value, _JSON_TYPES),
+            # The router always attaches unarmed compaction state; armed compaction
+            # would rewrite messages or add model calls and remains refused.
+            "_context_compaction_state": lambda value: value is None or (not isinstance(value, _JSON_TYPES)
+                and getattr(value, "config", None) is None and getattr(value, "summary", None) is None),
+        })
+    for key, check in inert.items():
+        if key in data and not check(data[key]):
+            raise ValidationError("Unsupported request settings/tools/billing path; no paid attempt is permitted.")
+    # The logging object stays visible to the physical contract, which already lists it.
+    removed = set(inert) - ({"litellm_logging_obj"} if physical else set())
+    return {key: value for key, value in data.items() if key not in removed}
+
+
 class AttemptHooks:
-    def __init__(self, backend, buffer_streams=False):
+    def __init__(self, backend, buffer_streams=False, provider_api_base=None, provider_settings=None):
         self.backend = backend
         self.buffer_streams = buffer_streams
+        # None keeps the original binding: the SDK default or the official OpenAI
+        # URL. A reviewed deployment may instead name ONE exact endpoint.
+        self.provider_api_base = None if provider_api_base is None else provider_endpoint(provider_api_base)
+        self.provider_settings = provider_overrides(provider_settings or {})
 
     def pre_call(self, data, authenticated_user):
         runtime_metadata = data.get("metadata")
@@ -77,23 +157,25 @@ class AttemptHooks:
         # The pinned proxy adds transport/tracing metadata before call hooks.
         # These do not become provider settings or enter company records.
         runtime_keys = ("proxy_server_request", "litellm_call_id", "litellm_trace_id", "litellm_session_id")
-        shape = chat_request({key: value for key, value in data.items() if key not in runtime_keys}, envelope)
+        shape = chat_request({key: value for key, value in _host_runtime(data, physical=False).items() if key not in runtime_keys}, envelope)
         opened = {**context, "request_id": metadata["tarkado_request"], "kind": metadata["tarkado_kind"], **shape}
         self.backend.call("begin", opened)
         result = dict(data)
         # Do not send task tokens/identity metadata to the model provider.
         context = {**opened, "envelope": envelope.to_dict()}
-        # LiteLLM's function_setup consumes top-level metadata as its own
-        # logging/runtime metadata; the physical hook removes it before lowering.
+        # The context travels only in `metadata`, a kwarg the pinned LiteLLM owns
+        # and never lowers into the provider body (verified on the installed
+        # 1.104.0 proxy). Any other top-level key, e.g. `litellm_params`, is
+        # forwarded to the provider as an unknown body parameter.
         result["metadata"] = {CONTEXT_KEY: context}
-        result["litellm_params"] = {"metadata": {CONTEXT_KEY: context}}
         return result
 
     def pre_attempt(self, kwargs):
         context = self._context(kwargs)
         envelope = delivery_envelope(context["envelope"])
-        shape = chat_request(kwargs, envelope, physical=True)
-        if kwargs.get("api_base") not in (None, "https://api.openai.com/v1") or kwargs.get("custom_llm_provider") not in (None, "openai"):
+        shape = chat_request(_host_runtime(kwargs, physical=True), envelope, physical=True)
+        endpoints = (None, OFFICIAL_OPENAI_BASE) if self.provider_api_base is None else (self.provider_api_base,)
+        if kwargs.get("api_base") not in endpoints or kwargs.get("custom_llm_provider") not in (None, "openai"):
             raise ValidationError("Unapproved provider endpoint/transport differs from the OpenAI binding.")
         if kwargs.get("caching") not in (None, False):
             raise ValidationError("Caching has no supported physical-attempt settlement contract.")
@@ -103,19 +185,19 @@ class AttemptHooks:
         payload = {key: context[key] for key in ("task_token", "binding_ref", "session_ref", "request_id")}
         self.backend.call("attempt", {**payload, "attempt_id": attempt_id, "provider_model": envelope.provider_model, **shape})
         result = dict(kwargs)
-        result.pop("metadata", None)
         # SDK-internal retries cannot bypass the physical-attempt callback.
         # The approved deployment must also validate provider lowering honors it.
         result["max_retries"] = 0
+        # Reviewed gateway-owned settings are added only after the client's own
+        # request passed validation above; a client cannot supply or change them.
+        result.update(copy.deepcopy(self.provider_settings))
         if self.buffer_streams and shape["stream"]:
             result["stream"] = False
             result.pop("stream_options", None)
-        params = dict(result["litellm_params"])
-        metadata = dict(params["metadata"])
         # Each retry gets an independent attempt context; no shared mutable token.
-        metadata[CONTEXT_KEY] = {**context, "attempt_id": attempt_id, "started": time.monotonic()}
-        params["metadata"] = metadata
-        result["litellm_params"] = params
+        # The post-call deployment hooks receive these same kwargs back.
+        result["metadata"] = {**(kwargs.get("metadata") or {}), CONTEXT_KEY: {**context, "attempt_id": attempt_id, "started": time.monotonic()}}
+        result.pop("litellm_params", None)
         return result
 
     def _context(self, kwargs):
@@ -180,7 +262,7 @@ class AttemptHooks:
             await asyncio.to_thread(self.settle, kwargs, final if exhausted and not wrong_model else None, not exhausted or wrong_model)
 
 
-def make_callback(backend, *, managed_aliases, managed_deployment_ids):
+def make_callback(backend, *, managed_aliases, managed_deployment_ids, provider_api_base=None, provider_settings=None):
     """Explicit optional host registration; not called by either shipped launcher."""
     if not managed_aliases or not managed_deployment_ids or any(not isinstance(value, str) or not value for value in (*managed_aliases, *managed_deployment_ids)):
         raise ValidationError("Explicit reviewed gateway aliases and deployment IDs are required; do not intercept unrelated gateway work.")
@@ -199,7 +281,7 @@ def make_callback(backend, *, managed_aliases, managed_deployment_ids):
             raise ValidationError("Installed LiteLLM callback signature differs; do not load a silent non-enforcing hook.")
     from litellm.litellm_core_utils.streaming_handler import CustomStreamWrapper
     from litellm.llms.base_llm.base_model_iterator import MockResponseIterator
-    hooks = AttemptHooks(backend, buffer_streams=True)
+    hooks = AttemptHooks(backend, buffer_streams=True, provider_api_base=provider_api_base, provider_settings=provider_settings)
 
     def has_context(data):
         return CONTEXT_KEY in (data.get("metadata") or {}) or CONTEXT_KEY in data.get("litellm_params", {}).get("metadata", {})

@@ -1175,3 +1175,34 @@ existing gateway rather than becoming another gateway.
 - [ ] Keep an advanced method only if it improves a measured result.
 
 **Done when:** every “smart” feature beats a simple baseline or is removed.
+
+## Post-demo follow-ups — recorded 2026-10-24
+
+- [ ] **Revision-0 settlement bug.** When a developer ends a bound task whose gateway
+  journal is empty, owner-close finalizes at `delivery_revision 0`; selection replay
+  rejects revision 0 and the close rolls back with a 400 ("Selection accounting differs
+  from its historical delivery revision"), surfaced by the plugin as "RPC call failed".
+  Workaround: the gateway closes first. Fix with a regression test.
+- [ ] **Unknown attempts after a provider 4xx.** A provider rejection reached only the
+  failure deployment hook; decide whether a provider-returned 4xx with no usage can be
+  settled as a known zero-cost failure (with evidence) instead of staying unknown.
+- [ ] **Selection latency grows with history.** `live_guard` re-scans all company evidence
+  (mostly `ensure_safe` privacy checks over task ledgers), ~2 s per call on the DEMO host and
+  called several times per conditional select (9.7 s total by the eighth task). The plugin
+  timeout was raised to 30 s as a stopgap; cache or narrow the re-verification.
+- [ ] **Delivery binding survives an OpenCode restart.** The plugin keeps adapters in memory,
+  so a restarted host cannot end its own bound task (recovery creates a gap). Rebuild the
+  adapter from company state for an exact, still-open binding.
+- [ ] **Non-OpenAI provider bindings.** The gateway accepts only the OpenAI transport at
+  one reviewed endpoint. Azure AI Foundry's OpenAI-compatible `/openai/v1/` endpoint
+  should fit as a v2 `provider_api_base`; verify against a real resource before claiming it.
+- [ ] **Teammate routing proposal** (router/bandit/dataset): assess after the demo.
+- [ ] **Packaged local install** of the demo stack (company app, LiteLLM, OpenCode plugin)
+  for a developer laptop.
+
+- [ ] **Low-friction developer flow** (owner direction 2026-10-25): replace the four
+  commands and ten start dialogs with one "Use it / Keep mine" prompt; source everything
+  else from approved per-category defaults, the gateway and passive signals. Design and
+  open decisions in [LOW_FRICTION_FLOW.md](LOW_FRICTION_FLOW.md). Category: developer
+  picks first; local inference later. DEMO first step done 2026-10-25: `/tarkado-delivery-quick`
+  with bundle defaults (see LOW_FRICTION_FLOW.md status for the remaining gaps).

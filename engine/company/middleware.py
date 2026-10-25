@@ -21,7 +21,9 @@ class PrivateResponsesMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         response["Cache-Control"] = "no-store"
-        response["Referrer-Policy"] = "no-referrer"
+        # same-origin, not no-referrer: browsers send "Origin: null" on form POSTs under
+        # no-referrer, which fails the CSRF origin check. Nothing leaks cross-origin.
+        response["Referrer-Policy"] = "same-origin"
         response["X-Frame-Options"] = "DENY"
         response["Content-Security-Policy"] = "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
         return response

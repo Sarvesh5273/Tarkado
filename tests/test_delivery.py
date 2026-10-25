@@ -256,7 +256,10 @@ class DeliveryTests(TestCase):
                             "security": list(SecurityEvent.objects.values("details"))})
         for secret in (self.gateway_token, self.connector_token, self.bound["task_token"], "Synthetic private prompt", "Synthetic private output", "Synthetic private provider error"):
             self.assertNotIn(secret, saved)
-        self.assertNotIn("metadata", {k: v for k, v in request.items() if k != "litellm_params"})
+        # Only LiteLLM-owned `metadata` carries the context; it is never lowered into the provider body,
+        # while any other top-level key (e.g. `litellm_params`) would be forwarded to the provider.
+        self.assertNotIn("litellm_params", request)
+        self.assertEqual(set(request["metadata"]), {"tarkado_delivery_v1"})
 
     def test_known_settlement_exact_retry_and_changed_cost_refusal(self):
         self.binding()
@@ -298,7 +301,7 @@ class DeliveryTests(TestCase):
         delivery.settle_attempt(self.gateway_token, self.bound["binding_ref"], attempt, "0", zero_usage, "retryable_failure", 0,
                                 "controlled-provider-retry-receipt", "fixture-provider-cheap")
         second = self.hooks.pre_attempt(opened)
-        self.assertNotEqual(first["litellm_params"]["metadata"], second["litellm_params"]["metadata"])
+        self.assertNotEqual(first["metadata"], second["metadata"])
         self.assertEqual(len(self.state()["attempts"]), 2)
         self.assertEqual(self.state()["attempt_reserved_usd"], "0.04")
         self.assertEqual(self.provider.calls, 0)
@@ -340,8 +343,9 @@ class DeliveryTests(TestCase):
             self.assertEqual(provider.calls, 0)
             # This test fixture stands in ONLY for the existing gateway's HTTP
             # transport. Product code sends no provider request of its own.
-            wire = {key: value for key, value in physical.items() if key not in ("litellm_params", "max_retries")}
-            self.assertNotIn("metadata", wire)
+            # LiteLLM consumes `metadata` and `max_retries` itself; nothing else is withheld from the wire.
+            self.assertNotIn("litellm_params", physical)
+            wire = {key: value for key, value in physical.items() if key not in ("metadata", "max_retries")}
             with urlopen(Request(f"http://127.0.0.1:{server.server_port}/v1/chat/completions", json.dumps(wire).encode(),
                                  {"Content-Type": "application/json"}), timeout=5) as response:
                 received = json.loads(response.read())
@@ -360,6 +364,68 @@ class DeliveryTests(TestCase):
         with self.assertRaisesMessage(support.ValidationError, "endpoint"):
             self.hooks.pre_attempt({**opened, "api_base": "https://unapproved.example/v1"})
         self.assertEqual(self.state()["attempts"], {})
+
+    def test_installed_litellm_runtime_fields_are_accepted_only_in_inert_proxy_form(self):
+        # Shapes observed on the real LiteLLM 1.104.0 proxy/router (key names and value types only).
+        self.binding()
+        user = SimpleNamespace(user_id="employee-junior")
+        proxy = {"secret_fields": {"raw_headers": {"user-agent": "synthetic"}}, "litellm_logging_obj": SimpleNamespace(stream=True),
+                 "proxy_server_request": {"url": "synthetic"}, "litellm_call_id": "c", "litellm_trace_id": "t", "litellm_session_id": "s"}
+        # Only proxy-produced values pass; JSON look-alikes and router flags are not client settings.
+        for forged in ({"secret_fields": {"raw_headers": {}, "api_key": "x"}}, {"secret_fields": {"raw_headers": "x"}},
+                       {"litellm_logging_obj": {"stream": False}}, {"use_litellm_proxy": False}):
+            with self.assertRaisesMessage(support.ValidationError, "Unsupported request settings"):
+                self.hooks.pre_call({**self.body(), **proxy, **forged}, user)
+        opened = self.hooks.pre_call({**self.body(), **proxy}, user)
+        opened["model"] = "openai/fixture-provider-cheap"
+        router = {"allow_client_keepalive_override": False, "merge_reasoning_content_in_choices": False, "use_in_pass_through": False,
+                  "use_litellm_proxy": False, "use_xai_oauth": None, "shared_session": SimpleNamespace(),
+                  "_context_compaction_state": SimpleNamespace(config=None, summary=None)}
+        armed = ({"use_litellm_proxy": True}, {"use_in_pass_through": True}, {"use_xai_oauth": "token"}, {"merge_reasoning_content_in_choices": 1},
+                 {"shared_session": {"headers": {}}}, {"_context_compaction_state": SimpleNamespace(config=object(), summary=None)},
+                 {"_context_compaction_state": SimpleNamespace(config=None, summary=("model", None))}, {"_context_compaction_state": {"config": None}},
+                 {"secret_fields": {"raw_headers": {}, "api_key": "x"}}, {"litellm_trace_id": 7}, {"litellm_logging_obj": "x"})
+        for value in armed:
+            with self.assertRaisesMessage(support.ValidationError, "Unsupported request settings"):
+                self.hooks.pre_attempt({**opened, **router, **value})
+        self.assertEqual(self.state()["attempts"], {})
+        physical = self.hooks.pre_attempt({**opened, **router})
+        self.assertIs(physical["use_litellm_proxy"], False)
+        self.assertEqual(physical["max_retries"], 0)
+        self.assertEqual(len(self.state()["attempts"]), 1)
+
+
+    def test_reviewed_provider_endpoint_and_settings_apply_only_after_client_validation(self):
+        self.binding()
+        hooks = AttemptHooks(LocalBackend(self.gateway_token), provider_api_base="http://127.0.0.1:9/reviewed/v1",
+                             provider_settings={"reasoning_effort": "none", "extra_body": {"prompt_cache_options": {"mode": "explicit"}}})
+        # A client cannot choose provider settings itself; only the reviewed gateway adds them.
+        with self.assertRaisesMessage(support.ValidationError, "Unsupported request settings"):
+            hooks.pre_call(self.body(reasoning_effort="high"), SimpleNamespace(user_id="employee-junior"))
+        with self.assertRaisesMessage(support.ValidationError, "Unsupported request settings"):
+            hooks.pre_call(self.body(extra_body={"service_tier": "flex"}), SimpleNamespace(user_id="employee-junior"))
+        opened = hooks.pre_call(self.body(), SimpleNamespace(user_id="employee-junior"))
+        opened["model"] = "openai/fixture-provider-cheap"
+        # With an exact reviewed endpoint, the SDK default and official URL are other endpoints.
+        for endpoint in (None, "https://api.openai.com/v1", "http://127.0.0.1:9/reviewed/v1/", "http://127.0.0.1:9/other/v1"):
+            with self.assertRaisesMessage(support.ValidationError, "endpoint"):
+                hooks.pre_attempt({**opened, "api_base": endpoint} if endpoint else opened)
+        self.assertEqual(self.state()["attempts"], {})
+        # A gateway-owned setting already present on the physical request is not overwritten silently.
+        with self.assertRaisesMessage(support.ValidationError, "Unsupported request settings"):
+            hooks.pre_attempt({**opened, "api_base": "http://127.0.0.1:9/reviewed/v1", "reasoning_effort": "high"})
+        self.assertEqual(self.state()["attempts"], {})
+        physical = hooks.pre_attempt({**opened, "api_base": "http://127.0.0.1:9/reviewed/v1"})
+        self.assertEqual(physical["reasoning_effort"], "none")
+        self.assertEqual(physical["extra_body"], {"prompt_cache_options": {"mode": "explicit"}})
+        self.assertEqual(physical["max_retries"], 0)
+        self.assertNotIn("litellm_params", physical)
+        self.assertEqual(set(physical["metadata"]), {"tarkado_delivery_v1"})
+        self.assertEqual(len(self.state()["attempts"]), 1)
+        with self.assertRaises(support.ValidationError):
+            AttemptHooks(LocalBackend(self.gateway_token), provider_api_base="http://provider.example/v1")
+        with self.assertRaises(support.ValidationError):
+            AttemptHooks(LocalBackend(self.gateway_token), provider_settings={"extra_body": {"n": 4}})
 
 
 class DeliveryConcurrencyTests(TransactionTestCase):
