@@ -43,7 +43,23 @@
       "category": "test_generation",
       "target": "inventory/suppliers.py",
       "selected_model": "company/sol",
-      "response": "reject"
+      "response": "accept"
+    },
+    {
+      "id": "T2",
+      "persona": "senior",
+      "category": "test_generation",
+      "target": "inventory/stock.py",
+      "selected_model": "company/sol",
+      "response": "accept"
+    },
+    {
+      "id": "T3",
+      "persona": "senior",
+      "category": "test_generation",
+      "target": "inventory/pricing.py",
+      "selected_model": "company/sol",
+      "response": "accept"
     }
   ],
   "routed": [
@@ -59,6 +75,13 @@
       "persona": "senior",
       "category": "documentation",
       "target": "inventory/suppliers.py",
+      "selected_model": "company/sol"
+    },
+    {
+      "id": "R3",
+      "persona": "junior",
+      "category": "test_generation",
+      "target": "inventory/returns.py",
       "selected_model": "company/sol"
     }
   ],

@@ -9,14 +9,17 @@ prints the refusal.
 Stages (run in order; each is idempotent where the product is):
   setup      private files, company bootstrap, checkouts, gateway keys, host validation
   people     owner MFA, invitations, developer enrolment + MFA
-  shadow     S1-S3, J1, T1: recorded tasks, suggestion, response, real OpenCode run,
+  shadow     S1-S3, J1 (documentation), T1-T3 (test writing): recorded tasks, suggestion, response, real OpenCode run,
              reported model, independent CI, result
   review     category evidence review + learner publication
   approve    scope authorization (fresh MFA, real readiness verifier) + activation
   delivery   gateway identity, LiteLLM callback, developer pairing
-  routed     R1/R2 through OpenCode -> LiteLLM -> provider, settlement, feedback
+  routed     R1/R2 (documentation), R3 (test writing) through OpenCode -> LiteLLM -> provider, settlement, feedback
   relearn    the next learning review including routed outcomes
   drill      F1 failure: provider path lost mid-attempt -> pause -> rollback -> N1
+  laptop     pair a laptop and write its private bundle
+  autosettle (run by the stack) close each ended task's cost record once nothing is in flight
+  settle     manual fallback: close one task's cost record
   status     print a metadata summary
 
 State: local/full-loop/ (gitignored). Usage: run_loop.py <stage> [...]
@@ -123,7 +126,11 @@ def now():
 
 
 def git(repo, *args):
-    return subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
+    # Never let git search above the demo directory: a checkout that lost its .git would
+    # otherwise resolve to the enclosing workspace repository, where "checkout -f",
+    # "reset --hard" and "clean -fdx" would destroy real files.
+    env = {**os.environ, "GIT_CEILING_DIRECTORIES": str(Path(repo).resolve().parent)}
+    return subprocess.run(["git", *args], cwd=repo, env=env, check=True, capture_output=True, text=True).stdout.strip()
 
 
 def cost_of(model, usage):
@@ -293,8 +300,17 @@ def instruction(task):
     return TASKS["instructions"][task["category"]].format(target=task["target"], module=module, test_file=test_file)
 
 
+def clone_checkout(name):
+    """Per-developer clone whose git directory sits beside the checkout (not a nested .git
+    folder, which this workspace has lost before)."""
+    repo = WORK / name / "repo"
+    git(WORK, "clone", "-q", f"--separate-git-dir={WORK / name / 'repo-git'}", str(WORK / "origin.git"), str(repo))
+
+
 def fresh_checkout(name, task_id):
     repo = WORK / name / "repo"
+    if not (repo / ".git").exists():
+        raise RuntimeError(f"{repo} is not a git checkout (its .git is missing); re-clone it before running tasks.")
     base = load_state()["base_commit"]
     git(repo, "checkout", "-q", "-f", "main")
     git(repo, "reset", "-q", "--hard", base)
@@ -467,7 +483,7 @@ def stage_setup():
     for name in ("senior", "junior"):
         repo = WORK / name / "repo"
         if not repo.exists():
-            git(WORK, "clone", "-q", str(origin), str(repo))
+            clone_checkout(name)
         write_oc_config(name)
     link = DEMO / "node_modules"
     if not link.exists():
@@ -664,23 +680,24 @@ def selection_summary(html):
     return text[start:start + 700]
 
 
-def stage_approve(label="initial", pilot_id="demo-documentation-luna"):
+def stage_approve(label="initial", pilot_id="demo-documentation-luna", task_types="documentation"):
     state = load_state()
     if not state.get("pilot"):
         path = state["reviews"][label]["path"] + "authorize/"
         page = browser("owner").get(path)
         developers = [key for key, _ in Forms(page.html).containing("pilot_id")["options"]["developer_ids"]]
-        values = {"pilot_id": pilot_id, "repository_ref": REPOSITORY, "task_types": ["documentation"],
-                  "developer_ids": developers, "max_tasks": 5, "max_cost_usd": "0.50",
+        types = [value for value in task_types.split(",") if value]
+        values = {"pilot_id": pilot_id, "repository_ref": REPOSITORY, "task_types": types,
+                  "developer_ids": developers, "max_tasks": 8, "max_cost_usd": "0.50",
                   "expires_at": (now() + timedelta(hours=10)).isoformat(), "target": "live", "decision": "approve",
-                  "reason": "DEMO full loop: first limited automatic-routing pilot, documentation -> company/luna"}
+                  "reason": f"DEMO full loop: limited automatic-routing pilot, {' + '.join(types)} -> company/luna"}
         page = preview_then_confirm("owner", path, values, "pilot_id", page=page)
         if "/pilots/reviews/" in page.path:
             raise RuntimeError("Live scope authorization was refused: " + form_errors(page.html))
         state["pilot"] = {"path": page.path, "pilot_id": pilot_id, "review": label}
         save_state(state)
-        log(f"owner (designated approver) authorized live scope: documentation -> company/luna for {developers}, "
-            f"max 5 tasks / $0.50, readiness verified by the server. Pilot page {page.path}")
+        log(f"owner (designated approver) authorized live scope: {', '.join(types)} -> company/luna for {developers}, "
+            f"max 8 tasks / $0.50, readiness verified by the server. Pilot page {page.path}")
     pilot = state["pilot"]
     if not pilot.get("active"):
         # Live scope approval never permits a model call; conditional selection is
@@ -790,19 +807,88 @@ def stage_laptop(name, directory, bundle):
     log(f"{name} paired a laptop connector for {directory} (bundle local/full-loop/laptop/{bundle}.json, private, connector expires in 23h).")
 
 
+def ended_unsettled_bindings(quiet_seconds=3, stuck_seconds=600):
+    """Read-only look at the company store: gateway bindings whose task the developer has
+    ended but whose cost the pilot has not settled yet. The gateway close writes that
+    settlement (the pilot's final spend and task count), and the pilot lets the next task
+    start only once every ended task is settled. A binding is ready when every attempt has
+    a known cost and nothing happened for quiet_seconds. An attempt still without a known
+    cost after stuck_seconds is reported, never closed (closing would make the cost
+    unknown). Returns (ready, stuck) binding references."""
+    database = sqlite3.connect(f"file:{STORE / 'company.sqlite3'}?mode=ro", uri=True)
+    try:
+        rows = database.execute(
+            "SELECT b.reference, b.selection_id, b.journal, t.closed_at, r.journal FROM company_deliverybinding b "
+            "JOIN company_connectortask t ON t.id = b.connector_task_id "
+            "JOIN company_scopedselectionruntime r ON r.id = b.runtime_id WHERE t.closed_at IS NOT NULL").fetchall()
+    finally:
+        database.close()
+    ready, stuck, moment = [], [], datetime.now(timezone.utc)
+    for reference, selection_id, journal, closed_at, runtime in rows:
+        if any(event["action"] == "delivery_settle" and event["payload"].get("selection_id") == selection_id
+               for event in json.loads(runtime)["events"]):
+            continue
+        events = json.loads(journal)
+        admitted = {event["payload"]["attempt_id"] for event in events if event["action"] == "attempt"}
+        known = {event["payload"]["attempt_id"] for event in events
+                 if event["action"] == "settle" and event["payload"].get("cost_usd") is not None}
+        ended = datetime.fromisoformat(str(closed_at)).replace(tzinfo=timezone.utc)
+        last = max([ended] + [datetime.fromisoformat(event["timestamp"]) for event in events])
+        if admitted - known:
+            if (moment - ended).total_seconds() > stuck_seconds:
+                stuck.append(str(uuid.UUID(str(reference))))
+        elif (moment - last).total_seconds() >= quiet_seconds:
+            ready.append(str(uuid.UUID(str(reference))))
+    return ready, stuck
+
+
+def close_binding(binding, why):
+    closed = gateway_call("close", {"binding_ref": binding})
+    log(f"gateway operator closed cost record {binding[:8]}... ({why}): " + json.dumps(
+        {key: closed.get(key) for key in ("closed", "known_cost_usd", "unknown_attempts")}, sort_keys=True))
+    return closed
+
+
+def stage_autosettle(interval="2"):
+    """Gateway operator automation (run by the stack supervisor): close the cost record of
+    every task a developer has ended, as soon as every attempt has a known cost, so the
+    pilot settles it and the next task can start. The developer's rating is recorded by
+    the plugin itself. Anything that cannot settle is reported once, never forced."""
+    log("autosettle: settling each ended task once every attempt has a known cost")
+    reported, closed, last_error = set(), set(), None
+    while True:
+        try:
+            ready, stuck = ended_unsettled_bindings()
+            for binding in ready:
+                if binding in closed:
+                    if binding not in reported:
+                        reported.add(binding)
+                        log(f"autosettle: {binding[:8]}... was closed but the pilot has no settlement for it; left for the operator.")
+                    continue
+                close_binding(binding, "task ended in OpenCode; every attempt has a known cost")
+                closed.add(binding)
+            for binding in set(stuck) - reported:
+                reported.add(binding)
+                log(f"autosettle: {binding[:8]}... ended with an attempt cost still unknown after 10 minutes; "
+                    "left open for the operator (the pilot stays paused until it is resolved).")
+            last_error = None
+        except Exception as error:  # keep running; report each distinct problem once
+            message = f"{type(error).__name__}: {error}"[:400]
+            if message != last_error:
+                log(f"autosettle: {message}")
+            last_error = message
+        time.sleep(float(interval))
+
+
 def stage_settle(task_ref):
-    """Gateway operator settlement for a task run from a laptop (after the developer
-    ended it in OpenCode): close its binding and show the known cost. Reports nothing
-    for the developer; model and result stay theirs to report."""
+    """Manual fallback for autosettle: close one ended task's cost record now."""
     if not re.fullmatch(r"[0-9a-f-]{36}", task_ref):
         raise SystemExit("Give the task reference from /tarkado-delivery-browser (/tasks/<ref>/).")
     task_path = f"/tasks/{task_ref}/"
     binding = binding_ref_of(task_path)
     if not binding:
         raise SystemExit("That task has no gateway binding.")
-    closed = gateway_call("close", {"binding_ref": binding})
-    log(f"gateway operator closed binding {binding[:8]}... for task {task_ref[:8]}...: " + json.dumps(
-        {key: closed.get(key) for key in ("closed", "known_cost_usd", "unknown_attempts")}, sort_keys=True))
+    close_binding(binding, f"manual settle of task {task_ref[:8]}...")
     log("  " + delivery_line(browser("owner").get(task_path).html))
 
 
@@ -894,7 +980,7 @@ def stage_rollback(reason):
         save_state(state)
 
 
-def stage_rescope(label="rescope", pilot_id="demo-documentation-luna-2"):
+def stage_rescope(label="rescope", pilot_id="demo-documentation-luna-2", task_types="documentation"):
     """Stale live authority is never repaired in place: revoke it, review the
     complete evidence (including the gap tasks) again, and approve a new pilot."""
     state = load_state()
@@ -908,7 +994,7 @@ def stage_rescope(label="rescope", pilot_id="demo-documentation-luna-2"):
         stage_review(label)
     if not load_state()["reviews"][label].get("published"):
         stage_publish(label)
-    stage_approve(label, pilot_id)
+    stage_approve(label, pilot_id, task_types)
 
 
 # ---------------------------------------------------------------- stage: routed
@@ -1077,7 +1163,7 @@ def stage_relearn(label="relearn"):
         stage_publish(label)
 
 
-STAGES = {"laptop": stage_laptop, "settle": stage_settle, "relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
+STAGES = {"laptop": stage_laptop, "settle": stage_settle, "autosettle": stage_autosettle, "relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in STAGES:

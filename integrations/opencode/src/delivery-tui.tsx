@@ -8,7 +8,7 @@ export default Plugin.define({ id: "tarkado.delivery.cli", setup(context) {
   const [status, setStatus] = createSignal<any>({ task: null, delivery: null })
   const act = deliveryActions({ rpc: context.client.rpc(DeliveryRPC), context, status, setStatus })
   const commands = [["quick", "Start a task with the Tarkado suggestion (one confirmation)", act.quick], ["connect", "Inspect delivery setup", act.connect], ["start", "Create NEW bound task session (no prompt)", act.start],
-    ["end", "End this delivery task; retain costs", act.end], ["accept", "Accept this suggestion only", act.accept],
+    ["end", "End this delivery task; retain costs", act.end], ["rate", "Rate this ended task 0-5", act.rate], ["accept", "Accept this suggestion only", act.accept],
     ["reject", "Reject this suggestion only", act.reject], ["report-model", "Report actual policy model used", act.reportModel],
     ["result", "Report eventual engineering result", act.result], ["browser", "Show private company record path", act.browser]] as const
   context.ui.slot({ append: "app", render: () => {

@@ -1,12 +1,12 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { deliveryActions, deliveryLines } from "../src/delivery-actions.mjs"
+import { deliveryActions, deliveryLines, RATINGS, SUCCESS_RATING } from "../src/delivery-actions.mjs"
 import { DeliveryCoordinator } from "../src/delivery-coordinator.mjs"
 import { readFile } from "node:fs/promises"
 import vm from "node:vm"
 import { FreshSessionDeliveryAdapter } from "../src/delivery-adapter.mjs"
 
-function setup() {
+function setup(timing) {
   const calls = [], toasts = []
   let current = { type: "session", sessionID: "ses_unrelated_active" }, state = { task: null }
   const prompts = ["Explicit synthetic task", "2000", "1000", "0.10"]
@@ -21,7 +21,7 @@ function setup() {
       accounting: { remaining_usd: "1.00", remaining_task_slots: 3 } }] }
   const rpc = { async connect() { return config }, async start(input) { calls.push({ method: "start", input }); return { sessionCreated: true, executionSent: false, sessionID: "ses_new_bound" } },
     async state(input) { calls.push({ method: "state", input }); return { task: null } }, async end(input) { calls.push({ method: "end", input }) } }
-  const actions = deliveryActions({ rpc, context, status: () => state, setStatus: value => { state = value } })
+  const actions = deliveryActions({ rpc, context, status: () => state, setStatus: value => { state = value }, timing })
   return { actions, rpc, context, config, calls, toasts, changeRoute: value => { current = value } }
 }
 
@@ -75,7 +75,9 @@ test("delivery end refuses unknown or running sessions instead of releasing thei
   rpc.state = async input => { calls.push({ method: "state", input }); return { task: { task_revision: 1 } } }
   await actions.end()
   assert.deepEqual(calls[1], { method: "end", input: { sessionID: "ses_unrelated_active" } })
-  assert.equal(toasts.length, 7)
+  // Ended without a reported model: no rating is asked; the developer is told how to rate later.
+  assert.equal(toasts.length, 8)
+  assert.match(toasts[7].message, /report the model used/)
 })
 
 test("task panel keeps unknown obligations and complete negative budget visible", () => {
@@ -138,20 +140,27 @@ test("all outgoing kinds keep fixed model and explicit output cap without alteri
   assert.throws(() => adapter.prepareOptions({ sessionID: adapter.sessionID, model: adapter.binding.model, options: { maxTokens: "unknown" } }), /invalid output/)
 })
 
-function quickSetup({ attempts = [{ outcome: "completed" }], unknown = 0, reserved = "0", known = "0.0017" } = {}) {
-  const base = setup()
+function quickSetup({ attempts = [{ outcome: "completed" }], unknown = 0, reserved = "0", known = "0.0017", suggested = "fixture/cheap", rating = "",
+  costClosed = true, timing } = {}) {
+  const base = setup(timing)
   const confirms = []
   base.config.quick_start = { selectedModel: "fixture/premium", requiredTools: ["read", "edit"], contextTokens: 20000, outputLimit: 4096, taskCapUSD: "0.10", labelPrefix: "junior" }
   base.config.scopes[0].routes[0].local_tools = [{ capability: "read" }, { capability: "edit" }]
   base.context.ui.dialog.confirm = async value => { confirms.push(value); return true }
-  base.context.ui.dialog.select = async () => { throw new Error("quick start must not ask") }
+  const selects = []
+  // Quick start itself never asks; only End offers the optional rating.
+  base.context.ui.dialog.select = async value => { selects.push(value); if (value.title.startsWith("Rate")) return rating; throw new Error("quick start must not ask") }
   base.context.ui.dialog.prompt = async () => { throw new Error("quick start must not ask") }
+  let reported = null, closed = false, result = null
+  base.rpc.end = async input => { base.calls.push({ method: "end", input }); closed = true }
   base.rpc.state = async input => { base.calls.push({ method: "state", input })
     if (input.sessionID === "ses_unrelated_active") return { task: null }
-    return { task: { task_revision: 4, response: null, reported_actual_model: null },
-      delivery: { policy_model: "fixture/cheap", unknown_attempts: unknown, attempt_reserved_usd: reserved, known_cost_usd: known, attempts } } }
-  base.rpc.feedback = async input => { base.calls.push({ method: "feedback", input }) }
-  return { ...base, confirms }
+    return { task: { task_revision: 4, response: null, reported_actual_model: reported, closed, recommendation: { recommended_model: suggested }, current_result: result },
+      delivery: { policy_model: "fixture/cheap", unknown_attempts: unknown, attempt_reserved_usd: reserved, known_cost_usd: known, attempts, closed: costClosed } } }
+  base.rpc.feedback = async input => { base.calls.push({ method: "feedback", input })
+    if (input.action === "actual_model") reported = input.value
+    if (input.action === "result") result = { result_id: "res_1", ...input.value } }
+  return { ...base, confirms, selects, report: value => { reported = value }, closeCost: () => { costClosed = true }, setResult: value => { result = value } }
 }
 
 test("quick start asks once, uses reviewed defaults, and records the explicit acceptance", async () => {
@@ -169,6 +178,15 @@ test("quick start asks once, uses reviewed defaults, and records the explicit ac
   assert.equal(input.taskCapUSD, "0.10")
   assert.match(input.taskLabel, /^junior-\d{8}-\d{6}$/)
   assert.deepEqual(calls[4].input, { sessionID: "ses_new_bound", action: "response", expectedRevision: 4, value: "accept" })
+})
+
+test("quick start never records acceptance of a suggestion that names another model", async () => {
+  // A stale learner can suggest the developer's usual model while the approved trial routes another.
+  const { actions, calls, toasts } = quickSetup({ suggested: "fixture/premium" })
+  await actions.quick()
+  assert.equal(toasts.length, 0)
+  assert.equal(calls.filter(x => x.method === "start").length, 1)
+  assert.equal(calls.filter(x => x.method === "feedback").length, 0)
 })
 
 test("quick start: keep mine, missing defaults, or no usable scope start nothing", async () => {
@@ -209,6 +227,9 @@ test("quick end reports the gateway-observed model only for a clean, known-cost 
     await run.actions.end()
     assert.equal(run.calls.filter(x => x.method === "feedback").length, 0, JSON.stringify(unsafe))
     assert.equal(run.calls.filter(x => x.method === "end").length, 1)
+    // Without a reported model the company cannot store a rating, so none is asked.
+    assert.equal(run.selects.length, 0)
+    assert.match(run.toasts.at(-1).message, /report the model used/)
   }
 })
 
@@ -217,6 +238,112 @@ test("explicit start never reports a model at end", async () => {
   explicit.context.data.session.status = () => "idle"
   explicit.changeRoute({ type: "session", sessionID: "ses_explicit" })
   await explicit.actions.end()
-  assert.deepEqual(explicit.calls.map(x => x.method), ["state", "end", "state"])
+  assert.deepEqual(explicit.calls.map(x => x.method), ["state", "end", "state", "state"])
   assert.equal(explicit.calls.filter(x => x.method === "feedback").length, 0)
+})
+
+test("rate: only for an ended task whose model the developer reported", async () => {
+  const later = quickSetup({ rating: "5" })
+  later.changeRoute({ type: "session", sessionID: "ses_explicit" })
+  await later.actions.rate()
+  assert.match(later.toasts.at(-1).message, /End the task first/)
+  later.context.data.session.status = () => "idle"
+  await later.actions.end()
+  assert.equal(later.selects.length, 0)
+  later.report("fixture/cheap")
+  later.calls.length = 0
+  await later.actions.rate()
+  await later.actions.ratingsSettled()
+  const results = later.calls.filter(x => x.method === "feedback" && x.input.action === "result")
+  assert.equal(results.length, 1)
+  assert.equal(results[0].input.sessionID, "ses_explicit")
+  assert.equal(results[0].input.value.score, "1")
+  assert.equal(results[0].input.value.desired_result, true)
+  // Rated once: a second rating would be a correction, which pauses the trial for review.
+  await later.actions.rate()
+  assert.match(later.toasts.at(-1).message, /already has a result/)
+  assert.equal(later.calls.filter(x => x.method === "feedback" && x.input.action === "result").length, 1)
+})
+
+test("end offers an optional 0-5 rating and records it as the task's single result: 4-5 desired", async () => {
+  const rated = quickSetup({ rating: "4" })
+  await rated.actions.quick()
+  rated.calls.length = 0
+  rated.context.data.session.status = () => "idle"
+  await rated.actions.end()
+  await rated.actions.ratingsSettled()
+  const ask = rated.selects.at(-1)
+  assert.deepEqual(ask.options.map(x => x.value), ["5", "4", "3", "2", "1", "0", ""])
+  assert.equal(ask.options.at(-1).title, "Skip")
+  assert.equal(RATINGS.length, 6)
+  const feedback = rated.calls.filter(x => x.method === "feedback").map(x => x.input)
+  assert.equal(feedback[0].action, "actual_model")
+  assert.deepEqual(feedback[1], { sessionID: "ses_new_bound", action: "result", expectedRevision: 4, value: {
+    desired_result: true, tests_passed: null, score: "0.8", cost_usd: null, latency_ms: null, evidence_ref: "developer-rating-0-5", supersedes: null } })
+  assert.equal(feedback.length, 2)
+  assert.match(rated.toasts.at(-1).message, /Rating 4\/5 recorded/)
+  assert.equal(SUCCESS_RATING, 4)
+  for (const [value, score, desired] of [["5", "1", true], ["0", "0", false], ["3", "0.6", false]]) {
+    const run = quickSetup({ rating: value })
+    await run.actions.quick()
+    run.context.data.session.status = () => "idle"
+    await run.actions.end()
+    await run.actions.ratingsSettled()
+    const recorded = run.calls.filter(x => x.method === "feedback" && x.input.action === "result")
+    assert.equal(recorded.length, 1)
+    assert.equal(recorded[0].input.value.score, score)
+    assert.equal(recorded[0].input.value.desired_result, desired)
+  }
+  for (const skipped of ["", undefined, "7", "controlled-scope"]) {
+    const run = quickSetup({ rating: skipped })
+    await run.actions.quick()
+    run.context.data.session.status = () => "idle"
+    await run.actions.end()
+    await run.actions.ratingsSettled()
+    assert.equal(run.calls.filter(x => x.method === "feedback" && x.input.action === "result").length, 0, String(skipped))
+    assert.equal(run.calls.filter(x => x.method === "end").length, 1)
+  }
+})
+
+test("a rating waits in the background for the cost record to close, then records once", async () => {
+  const run = quickSetup({ rating: "5", costClosed: false, timing: { waitMs: 2000, pollMs: 5 } })
+  await run.actions.quick()
+  run.context.data.session.status = () => "idle"
+  await run.actions.end()
+  // End returned while the rating waits; nothing recorded while the cost record is open.
+  assert.match(run.toasts.at(-1).message, /saved\. It is recorded once the company has this task's final cost/)
+  assert.equal(run.calls.filter(x => x.method === "feedback" && x.input.action === "result").length, 0)
+  await run.actions.rate()
+  assert.match(run.toasts.at(-1).message, /already waiting/)
+  run.closeCost()
+  await run.actions.ratingsSettled()
+  const recorded = run.calls.filter(x => x.method === "feedback" && x.input.action === "result")
+  assert.equal(recorded.length, 1)
+  assert.equal(recorded[0].input.value.desired_result, true)
+  assert.match(run.toasts.at(-1).message, /Rating 5\/5 recorded/)
+})
+
+test("a rating is never recorded over an existing result, and gives up visibly if the record stays open", async () => {
+  const open = quickSetup({ rating: "4", costClosed: false, timing: { waitMs: 30, pollMs: 5 } })
+  await open.actions.quick()
+  open.context.data.session.status = () => "idle"
+  await open.actions.end()
+  await open.actions.ratingsSettled()
+  assert.equal(open.calls.filter(x => x.method === "feedback" && x.input.action === "result").length, 0)
+  assert.match(open.toasts.at(-1).message, /not recorded yet: this task's final cost is still unknown/)
+  const raced = quickSetup({ rating: "4", costClosed: false, timing: { waitMs: 2000, pollMs: 5 } })
+  await raced.actions.quick()
+  raced.context.data.session.status = () => "idle"
+  await raced.actions.end()
+  raced.setResult({ result_id: "res_other", desired_result: null })
+  raced.closeCost()
+  await raced.actions.ratingsSettled()
+  assert.equal(raced.calls.filter(x => x.method === "feedback" && x.input.action === "result").length, 0)
+  assert.match(raced.toasts.at(-1).message, /already had a result/)
+})
+
+test("task panel shows the developer rating out of 5", () => {
+  const base = { task_label: "Controlled", recommendation: { effective_model: "fixture/premium" }, response: "accept" }
+  assert.ok(deliveryLines({ task: { ...base, current_result: { desired_result: null, score: "0.8" } } }).includes("Developer rating: 4/5"))
+  assert.ok(deliveryLines({ task: { ...base, current_result: null } }).includes("Developer rating: not rated"))
 })

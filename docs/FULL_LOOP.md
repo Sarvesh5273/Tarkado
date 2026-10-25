@@ -20,13 +20,16 @@ successes / 3 sessions), the sample repository is synthetic, and the people are 
 
 1. `setup`, `people` — bootstrap the company store, the owner with MFA, the developers,
    OpenCode hosts with isolated XDG directories.
-2. `shadow` — developers record tasks; Tarkado suggests a model; the developer accepts or
-   rejects; OpenCode runs; CI produces the result; the developer reports the actual model
-   and result.
+2. `shadow` — developers record tasks (S1–S3, J1 documentation; T1–T3 test writing);
+   Tarkado suggests a model; the developer accepts or rejects; OpenCode runs; CI produces the
+   result; the developer reports the actual model and result. Only senior-accepted suggestions
+   that succeed count as evidence, and one rejection or failure blocks that model for that
+   task type permanently (see ROADMAP.md), so the shadow seniors accept luna.
 3. `review`, `publish` — owner prepares the category evidence review and publishes the learner.
-4. `approve` — the pilot approver grants live scope with password + fresh MFA code; activation.
+4. `approve <review> <pilot id> documentation,test_generation` — the pilot approver grants
+   live scope with password + fresh MFA code (8 tasks, USD 0.50, 10 h); activation.
 5. `delivery` — gateway credential and developer pairing for routed delivery.
-6. `routed R1 R2` — a new task through the plugin: Tarkado selects at the new-task boundary,
+6. `routed R1 R2 R3` — a new task through the plugin (R3 is test writing): Tarkado selects at the new-task boundary,
    binds a session, the developer accepts, OpenCode → LiteLLM → provider runs, CI, gateway
    close settles the known cost, then actual model and result are reported. The runner
    reports nothing if the provider did not demonstrably complete (unknown attempts, zero
@@ -37,7 +40,8 @@ successes / 3 sessions), the sample repository is synthetic, and the people are 
    DECISIONS.md, 2026-10-24).
 
 Recovery: `recover <task_ref>` (gateway close, then end-interrupted, creates a gap),
-`close_refused <id> "<why>"` (gateway refused before any paid attempt), `rescope <label> <pilot_id>`.
+`close_refused <id> "<why>"` (gateway refused before any paid attempt),
+`rescope <label> <pilot_id> documentation,test_generation`.
 Never re-submit a lost start; never reuse a task label.
 
 ## Laptop demo
@@ -60,7 +64,8 @@ On the laptop, from a checkout of this branch:
    definitions match the reviewed host (otherwise the gateway would refuse every request).
 2. `node demo/laptop/start-demo.mjs start <bundle.json>`, then in OpenCode:
    `/tarkado-delivery-quick` → **Use suggestion** (one confirmation; records the acceptance)
-   → type the task → wait until it is idle → `/tarkado-delivery-end` → **End task**.
+   → pick the task type (documentation or test-writing) → type the task → wait until it is
+   idle → `/tarkado-delivery-end` → **End task** → rate it 0–5 (or Skip).
    **Keep OpenCode open until end.** "Keep mine" (or Esc) starts nothing. Normal prompts
    outside a Tarkado task go to team-sol unrouted; the footer shows `<task> → <model>` inside one.
    Quick start takes every bound from the bundle's reviewed `quickStart` defaults
@@ -70,10 +75,28 @@ On the laptop, from a checkout of this branch:
    the bound model at a known cost with nothing unknown or reserved; otherwise it reports
    nothing. `/tarkado-delivery-start` remains the fully explicit path (and the only path for
    bundles without `quickStart`, which need regenerating to use quick start).
-3. On the host: `settle <task_ref>` (gateway close, known cost).
+3. Nothing to do on the host: the stack's autosettle closes the task's cost record a few
+   seconds after End (the trial lets the next task start only once that has happened).
+   `settle <task_ref>` is the manual fallback.
 
-The model is reported from the laptop; the result stays unknown there (the CI key stays on
-the host). Expect select to take about 10 s.
+Ratings: 5 used as-is · 4 small fixes only · 3 usable after real edits · 2 mostly redone ·
+1 wrong or unusable · 0 harmful (broke something or misleading). The rating is recorded right
+after End as the task's one result: 4–5 = desired result, 0–3 = not (score = rating / 5).
+Keep OpenCode open until the "Rating … recorded" message. Expect select to take about 10 s.
+
+What happens to the trial (automatic):
+
+- Rated 4–5, or skipped: the trial continues.
+- Rated 0–3: the trial pauses until a new review, and that review blocks luna for that task
+  type (today one failure vetoes a model).
+- OpenCode closed before End: the task needs browser recovery, which records a gap; the trial
+  pauses until a new review.
+- A task is rated once. A second result is a correction, which also pauses the trial.
+
+Re-approval: the pilot approval accepts only outcomes checked by the company CI, which runs
+on the host. Laptop work is not CI-checked, so after any laptop task (rated or not) the next
+approval for that task type is refused. Rescope before the first laptop task of the day, then
+run the rehearsal and the demo within that one trial (8 tasks, USD 0.50, 10 h).
 
 ## Provider
 
