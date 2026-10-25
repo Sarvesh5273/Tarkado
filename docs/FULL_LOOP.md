@@ -61,7 +61,8 @@ On the laptop, from a checkout of this branch:
 2. `node demo/laptop/start-demo.mjs start <bundle.json>`, then in OpenCode:
    `/tarkado-delivery-quick` → **Use suggestion** (one confirmation; records the acceptance)
    → type the task → wait until it is idle → `/tarkado-delivery-end` → **End task**.
-   **Keep OpenCode open until end.** "Keep mine" (or Esc) starts nothing.
+   **Keep OpenCode open until end.** "Keep mine" (or Esc) starts nothing. Normal prompts
+   outside a Tarkado task go to team-sol unrouted; the footer shows `<task> → <model>` inside one.
    Quick start takes every bound from the bundle's reviewed `quickStart` defaults
    (original choice company/sol, read+edit tools, 20k context, 4096 output, USD 0.10 cap,
    label `<persona>-<UTC timestamp>`); it only asks which trial/category when more than one

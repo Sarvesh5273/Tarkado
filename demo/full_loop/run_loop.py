@@ -231,6 +231,9 @@ def oc_config(base_url, plugin=None):
                                                    "output": 16384 if alias == "team-sol" else 4096}}
               for alias in ("team-luna", "team-sol", "company-cheap")}
     config = {"$schema": "https://opencode.ai/config.json", "update": "disable", "share": "disabled",
+              # Normal (unrouted) work starts on the developer's usual model. company-cheap is
+              # reserved for bound Tarkado tasks and the gateway refuses it anywhere else.
+              "model": "company/team-sol",
               "providers": {"company": {"name": "Company gateway (DEMO)", "env": ["COMPANY_GATEWAY_KEY"],
                                         "package": "@opencode/ai/providers/openai-compatible",
                                         "settings": {"baseURL": base_url}, "models": models}},

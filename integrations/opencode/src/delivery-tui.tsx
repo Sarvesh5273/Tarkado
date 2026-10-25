@@ -20,7 +20,7 @@ export default Plugin.define({ id: "tarkado.delivery.cli", setup(context) {
     ] }))
     return null
   } })
-  context.ui.slot({ append: "prompt.footer.status", render: () => <text>Tarkado delivery · {status().task?.task_label ?? "no bound task"} · no silent switching</text> })
+  context.ui.slot({ append: "prompt.footer.status", render: () => <text>Tarkado delivery · {status().task ? `${status().task.task_label} → ${status().delivery?.policy_model ?? "model unknown"}` : "no bound task"} · no silent switching</text> })
   context.ui.slot({ append: "session.panel", render: panel => <Show when={panel.name === "tarkado.delivery.task"}>
     <box flexDirection="column"><text>Explicit delivery — separate approval, fixed model</text>
       <For each={deliveryLines(status())}>{line => <text wrapMode="word">{line}</text>}</For>

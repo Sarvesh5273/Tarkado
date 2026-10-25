@@ -38,7 +38,12 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
     if (busy) return
     busy = true
     try { await operation() }
-    catch { context.ui.toast.show({ title: "Tarkado delivery", message: "Delivery action refused/unavailable. Inspect company scope, verifier setup, pairing and retained accounting. Do not repeat a lost task start; use browser recovery.", variant: "error" }) }
+    // Our own error texts are written for the developer and never contain credentials;
+    // show the reason instead of a generic refusal.
+    catch (error) {
+      const reason = typeof error?.message === "string" && error.message ? error.message.slice(0, 240) : "Unknown reason."
+      context.ui.toast.show({ title: "Tarkado delivery", message: `Refused: ${reason} Do not repeat a lost task start; use browser recovery.`, variant: "error" })
+    }
     finally { busy = false }
   }
   // Sessions started through `quick`: only these get the gateway-observed model report at end.
@@ -55,6 +60,10 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
     // acceptance. Anything ambiguous (several scopes or categories) asks; anything missing refuses.
     quick: run(async () => {
       const original = snapshot()
+      if (original.route.type === "session") {
+        const here = await rpc.state({ sessionID: original.route.sessionID }, { location: original.location })
+        if (here.task && !here.task.closed) throw new Error("This session is already a Tarkado task. Finish it with /tarkado-delivery-end first.")
+      }
       const configuration = await rpc.connect({}, { location: original.location })
       if (!supported(configuration)) throw new Error("No supported paired gateway/collection setup.")
       const defaults = configuration.quick_start
@@ -174,8 +183,9 @@ export function deliveryActions({ rpc, context, status, setStatus }) {
       // Quick sessions: report the model only when the company gateway shows every attempt
       // completed on the bound model at a known cost, with nothing unknown or reserved.
       let observed = null
+      const current = await rpc.state({ sessionID: id }, { location: original.location })
+      if (!current.task) throw new Error("This session is not a Tarkado task, so there is nothing to end. Start one with /tarkado-delivery-quick.")
       if (quickSessions.has(id)) {
-        const current = await rpc.state({ sessionID: id }, { location: original.location })
         const delivery = current.delivery
         const attempts = delivery?.attempts ?? []
         if (current.task && current.task.reported_actual_model == null && delivery?.policy_model && Number(delivery.unknown_attempts) === 0

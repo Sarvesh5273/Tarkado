@@ -53,7 +53,7 @@ test("dialog cancellation route change and unconfigured scopes never start provi
 })
 
 test("delivery end refuses unknown or running sessions instead of releasing their cost", async () => {
-  const { actions, context, calls, toasts } = setup()
+  const { actions, context, calls, toasts, rpc } = setup()
   context.data.session.status = () => ({ type: "running" })
   await actions.end()
   assert.equal(calls.length, 0)
@@ -66,9 +66,16 @@ test("delivery end refuses unknown or running sessions instead of releasing thei
   assert.equal(calls.length, 0)
   assert.equal(toasts.length, 6)
   context.data.session.status = () => "idle"
+  // A session that is not a Tarkado task refuses with a reason, before any confirmation.
   await actions.end()
-  assert.deepEqual(calls[0], { method: "end", input: { sessionID: "ses_unrelated_active" } })
-  assert.equal(toasts.length, 6)
+  assert.deepEqual(calls.map(x => x.method), ["state"])
+  assert.equal(toasts.length, 7)
+  assert.match(toasts[6].message, /not a Tarkado task/)
+  calls.length = 0
+  rpc.state = async input => { calls.push({ method: "state", input }); return { task: { task_revision: 1 } } }
+  await actions.end()
+  assert.deepEqual(calls[1], { method: "end", input: { sessionID: "ses_unrelated_active" } })
+  assert.equal(toasts.length, 7)
 })
 
 test("task panel keeps unknown obligations and complete negative budget visible", () => {
@@ -140,6 +147,7 @@ function quickSetup({ attempts = [{ outcome: "completed" }], unknown = 0, reserv
   base.context.ui.dialog.select = async () => { throw new Error("quick start must not ask") }
   base.context.ui.dialog.prompt = async () => { throw new Error("quick start must not ask") }
   base.rpc.state = async input => { base.calls.push({ method: "state", input })
+    if (input.sessionID === "ses_unrelated_active") return { task: null }
     return { task: { task_revision: 4, response: null, reported_actual_model: null },
       delivery: { policy_model: "fixture/cheap", unknown_attempts: unknown, attempt_reserved_usd: reserved, known_cost_usd: known, attempts } } }
   base.rpc.feedback = async input => { base.calls.push({ method: "feedback", input }) }
@@ -152,32 +160,36 @@ test("quick start asks once, uses reviewed defaults, and records the explicit ac
   assert.equal(toasts.length, 0)
   assert.equal(confirms.length, 1)
   assert.equal(confirms[0].label.confirm, "Use suggestion")
-  assert.deepEqual(calls.map(x => x.method), ["start", "navigate", "state", "feedback", "state"])
-  const input = calls[0].input
+  assert.deepEqual(calls.map(x => x.method), ["state", "start", "navigate", "state", "feedback", "state"])
+  const input = calls[1].input
   assert.equal(input.selectedModel, "fixture/premium")
   assert.equal(input.overrideModel, null)
   assert.equal(input.taskType, "documentation")
   assert.deepEqual(input.requiredTools, ["read", "edit"])
   assert.equal(input.taskCapUSD, "0.10")
   assert.match(input.taskLabel, /^junior-\d{8}-\d{6}$/)
-  assert.deepEqual(calls[3].input, { sessionID: "ses_new_bound", action: "response", expectedRevision: 4, value: "accept" })
+  assert.deepEqual(calls[4].input, { sessionID: "ses_new_bound", action: "response", expectedRevision: 4, value: "accept" })
 })
 
 test("quick start: keep mine, missing defaults, or no usable scope start nothing", async () => {
   const kept = quickSetup()
   kept.context.ui.dialog.confirm = async () => false
   await kept.actions.quick()
-  assert.equal(kept.calls.length, 0)
+  assert.deepEqual(kept.calls.map(x => x.method), ["state"])
+  const inside = quickSetup(); inside.changeRoute({ type: "session", sessionID: "ses_open_task" })
+  await inside.actions.quick()
+  assert.equal(inside.calls.filter(x => x.method === "start").length, 0)
+  assert.match(inside.toasts[0].message, /already a Tarkado task/)
   const missing = quickSetup(); delete missing.config.quick_start
   await missing.actions.quick()
-  assert.equal(missing.calls.length, 0)
+  assert.equal(missing.calls.filter(x => x.method !== "state").length, 0)
   assert.equal(missing.toasts.length, 1)
   const invalid = quickSetup(); invalid.config.quick_start.selectedModel = "not/approved"
   await invalid.actions.quick()
-  assert.equal(invalid.calls.length, 0)
+  assert.equal(invalid.calls.filter(x => x.method !== "state").length, 0)
   const stale = quickSetup(); stale.config.scopes[0].authority_current = false
   await stale.actions.quick()
-  assert.equal(stale.calls.length, 0)
+  assert.equal(stale.calls.filter(x => x.method !== "state").length, 0)
 })
 
 test("quick end reports the gateway-observed model only for a clean, known-cost run", async () => {
@@ -205,5 +217,6 @@ test("explicit start never reports a model at end", async () => {
   explicit.context.data.session.status = () => "idle"
   explicit.changeRoute({ type: "session", sessionID: "ses_explicit" })
   await explicit.actions.end()
-  assert.deepEqual(explicit.calls.map(x => x.method), ["end", "state"])
+  assert.deepEqual(explicit.calls.map(x => x.method), ["state", "end", "state"])
+  assert.equal(explicit.calls.filter(x => x.method === "feedback").length, 0)
 })
