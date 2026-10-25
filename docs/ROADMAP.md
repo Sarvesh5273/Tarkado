@@ -44,8 +44,8 @@ everything else is planned, not built.
   laptop task's outcome, rated or not, blocks the next approval for its task type. Needed: CI on
   the pushed change (the pull request), cited by the task's result, with the rating as its score.
 - **The rating is the task's one result** (4–5 = desired, 0–3 = not), recorded right after End.
-  The trial also needs the task's cost settled before the next task starts; the demo stack does
-  this automatically, and in production the gateway should do it when the task ends.
+  The company settles the task's cost itself when it ends (or when its last cost arrives), so
+  the next task can start without a host step.
 
 ## Not built yet
 

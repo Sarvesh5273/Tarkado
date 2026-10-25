@@ -8,8 +8,6 @@ Processes (all bound to loopback or the private socket, except the bridge):
 
   * OpenCode servers  one `opencode serve` per developer persona on loopback
                       (4101 senior, 4102 junior), each with its own HOME/XDG
-  * autosettle        `run_loop.py autosettle` once the gateway credential exists:
-                      closes the cost record of each task a developer has ended
 
 The runner controls LiteLLM with signals to this supervisor:
   SIGHUP   (re)start LiteLLM from the current private config
@@ -44,7 +42,7 @@ def log(message):
 
 class Stack:
     def __init__(self):
-        self.company = self.litellm = self.bridge = self.autosettle = None
+        self.company = self.litellm = self.bridge = None
         self.opencode = {}
         self.want_litellm = (RUN / "litellm.enabled").exists()
         self.restart_litellm = False
@@ -115,18 +113,6 @@ class Stack:
                     time.sleep(3)
                 self.start_opencode(name)
 
-    def supervise_autosettle(self):
-        if not (PRIVATE / "gateway-credential.json").exists() or self.company is None:
-            return
-        if self.autosettle is None or self.autosettle.poll() is not None:
-            if self.autosettle is not None:
-                log(f"autosettle exited with {self.autosettle.returncode}; restarting in 3s")
-                time.sleep(3)
-            logfile = open(RUN / "autosettle.log", "ab")
-            self.autosettle = subprocess.Popen([PYTHON, str(DEMO / "run_loop.py"), "autosettle"], cwd=ROOT, env=CHILD_ENV,
-                                               stdin=subprocess.DEVNULL, stdout=logfile, stderr=subprocess.STDOUT)
-            log(f"autosettle started (pid {self.autosettle.pid})")
-
     def stop(self, process, name, sig=signal.SIGTERM):
         if process is not None and process.poll() is None:
             process.send_signal(sig)
@@ -185,12 +171,11 @@ class Stack:
                         time.sleep(3)
                     self.start_litellm()
                 self.supervise_opencode()
-                self.supervise_autosettle()
                 time.sleep(1)
         finally:
             for name, process in self.opencode.items():
                 self.stop(process, f"OpenCode server for {name}")
-            for process, name in ((self.autosettle, "autosettle"), (self.litellm, "LiteLLM"), (self.company, "company service"), (self.bridge, "bridge")):
+            for process, name in ((self.litellm, "LiteLLM"), (self.company, "company service"), (self.bridge, "bridge")):
                 self.stop(process, name)
 
 

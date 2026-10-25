@@ -18,7 +18,6 @@ Stages (run in order; each is idempotent where the product is):
   relearn    the next learning review including routed outcomes
   drill      F1 failure: provider path lost mid-attempt -> pause -> rollback -> N1
   laptop     pair a laptop and write its private bundle
-  autosettle (run by the stack) close each ended task's cost record once nothing is in flight
   settle     manual fallback: close one task's cost record
   status     print a metadata summary
 
@@ -807,41 +806,6 @@ def stage_laptop(name, directory, bundle):
     log(f"{name} paired a laptop connector for {directory} (bundle local/full-loop/laptop/{bundle}.json, private, connector expires in 23h).")
 
 
-def ended_unsettled_bindings(quiet_seconds=3, stuck_seconds=600):
-    """Read-only look at the company store: gateway bindings whose task the developer has
-    ended but whose cost the pilot has not settled yet. The gateway close writes that
-    settlement (the pilot's final spend and task count), and the pilot lets the next task
-    start only once every ended task is settled. A binding is ready when every attempt has
-    a known cost and nothing happened for quiet_seconds. An attempt still without a known
-    cost after stuck_seconds is reported, never closed (closing would make the cost
-    unknown). Returns (ready, stuck) binding references."""
-    database = sqlite3.connect(f"file:{STORE / 'company.sqlite3'}?mode=ro", uri=True)
-    try:
-        rows = database.execute(
-            "SELECT b.reference, b.selection_id, b.journal, t.closed_at, r.journal FROM company_deliverybinding b "
-            "JOIN company_connectortask t ON t.id = b.connector_task_id "
-            "JOIN company_scopedselectionruntime r ON r.id = b.runtime_id WHERE t.closed_at IS NOT NULL").fetchall()
-    finally:
-        database.close()
-    ready, stuck, moment = [], [], datetime.now(timezone.utc)
-    for reference, selection_id, journal, closed_at, runtime in rows:
-        if any(event["action"] == "delivery_settle" and event["payload"].get("selection_id") == selection_id
-               for event in json.loads(runtime)["events"]):
-            continue
-        events = json.loads(journal)
-        admitted = {event["payload"]["attempt_id"] for event in events if event["action"] == "attempt"}
-        known = {event["payload"]["attempt_id"] for event in events
-                 if event["action"] == "settle" and event["payload"].get("cost_usd") is not None}
-        ended = datetime.fromisoformat(str(closed_at)).replace(tzinfo=timezone.utc)
-        last = max([ended] + [datetime.fromisoformat(event["timestamp"]) for event in events])
-        if admitted - known:
-            if (moment - ended).total_seconds() > stuck_seconds:
-                stuck.append(str(uuid.UUID(str(reference))))
-        elif (moment - last).total_seconds() >= quiet_seconds:
-            ready.append(str(uuid.UUID(str(reference))))
-    return ready, stuck
-
-
 def close_binding(binding, why):
     closed = gateway_call("close", {"binding_ref": binding})
     log(f"gateway operator closed cost record {binding[:8]}... ({why}): " + json.dumps(
@@ -849,39 +813,9 @@ def close_binding(binding, why):
     return closed
 
 
-def stage_autosettle(interval="2"):
-    """Gateway operator automation (run by the stack supervisor): close the cost record of
-    every task a developer has ended, as soon as every attempt has a known cost, so the
-    pilot settles it and the next task can start. The developer's rating is recorded by
-    the plugin itself. Anything that cannot settle is reported once, never forced."""
-    log("autosettle: settling each ended task once every attempt has a known cost")
-    reported, closed, last_error = set(), set(), None
-    while True:
-        try:
-            ready, stuck = ended_unsettled_bindings()
-            for binding in ready:
-                if binding in closed:
-                    if binding not in reported:
-                        reported.add(binding)
-                        log(f"autosettle: {binding[:8]}... was closed but the pilot has no settlement for it; left for the operator.")
-                    continue
-                close_binding(binding, "task ended in OpenCode; every attempt has a known cost")
-                closed.add(binding)
-            for binding in set(stuck) - reported:
-                reported.add(binding)
-                log(f"autosettle: {binding[:8]}... ended with an attempt cost still unknown after 10 minutes; "
-                    "left open for the operator (the pilot stays paused until it is resolved).")
-            last_error = None
-        except Exception as error:  # keep running; report each distinct problem once
-            message = f"{type(error).__name__}: {error}"[:400]
-            if message != last_error:
-                log(f"autosettle: {message}")
-            last_error = message
-        time.sleep(float(interval))
-
-
 def stage_settle(task_ref):
-    """Manual fallback for autosettle: close one ended task's cost record now."""
+    """Manual fallback: close one task's cost record now. Normally nothing is needed: the
+    company settles a task itself when the developer ends it, or when its last cost arrives."""
     if not re.fullmatch(r"[0-9a-f-]{36}", task_ref):
         raise SystemExit("Give the task reference from /tarkado-delivery-browser (/tasks/<ref>/).")
     task_path = f"/tasks/{task_ref}/"
@@ -984,7 +918,8 @@ def stage_rescope(label="rescope", pilot_id="demo-documentation-luna-2", task_ty
     """Stale live authority is never repaired in place: revoke it, review the
     complete evidence (including the gap tasks) again, and approve a new pilot."""
     state = load_state()
-    if state["pilot"].get("pilot_id", "demo-documentation-luna") != pilot_id:
+    # No current pilot when the previous rescope's approval was refused (it was already retired).
+    if "pilot" in state and state["pilot"].get("pilot_id", "demo-documentation-luna") != pilot_id:
         if not state["pilot"].get("rolled_back"):
             pilot_control("revoke", "DEMO full loop: live authority went stale after interrupted-start gaps; revoke before a new review")
         state = load_state()
@@ -1163,7 +1098,7 @@ def stage_relearn(label="relearn"):
         stage_publish(label)
 
 
-STAGES = {"laptop": stage_laptop, "settle": stage_settle, "autosettle": stage_autosettle, "relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
+STAGES = {"laptop": stage_laptop, "settle": stage_settle, "relearn": stage_relearn, "setup": stage_setup, "people": stage_people, "shadow": stage_shadow, "review": stage_review, "publish": stage_publish, "approve": stage_approve, "delivery": stage_delivery, "recover": stage_recover, "rescope": stage_rescope, "routed": stage_routed, "close_refused": stage_close_refused, "rollback": stage_rollback}
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] not in STAGES:

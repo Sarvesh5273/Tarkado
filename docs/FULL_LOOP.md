@@ -75,9 +75,9 @@ On the laptop, from a checkout of this branch:
    the bound model at a known cost with nothing unknown or reserved; otherwise it reports
    nothing. `/tarkado-delivery-start` remains the fully explicit path (and the only path for
    bundles without `quickStart`, which need regenerating to use quick start).
-3. Nothing to do on the host: the stack's autosettle closes the task's cost record a few
-   seconds after End (the trial lets the next task start only once that has happened).
-   `settle <task_ref>` is the manual fallback.
+3. Nothing to do on the host: the company settles the task's cost itself when it is ended,
+   or when its last cost arrives (the trial lets the next task start only once that has
+   happened). `settle <task_ref>` is the manual fallback.
 
 Ratings: 5 used as-is · 4 small fixes only · 3 usable after real edits · 2 mostly redone ·
 1 wrong or unusable · 0 harmful (broke something or misleading). The rating is recorded right
